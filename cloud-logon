@@ -3,7 +3,7 @@
 set -e
 EXPECTSCRIPT=`mktemp`
 
-read -s -p "Enter new MyProxy pass phrase: " myproxypass
+read -s -p "Enter MyProxy pass phrase: " myproxypass
 echo ""
 
 export myproxypass
