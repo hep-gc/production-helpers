@@ -1,0 +1,85 @@
+#!/bin/sh
+set -e
+EXPECTSCRIPT=`mktemp`
+MYPROXY_USER=`whoami`
+CONDOR_CERT_DN="condor/condor.heprc.uvic.ca"
+CREDENTIAL_NAME="$MYPROXY_USER.condor"
+SCRIPT=`basename $0`
+
+#Needed until condor 7.5.7 comes out
+export GT_PROXY_MODE="old"
+
+SCARY_ENVVARS="GLOBUS_LOCATION X509_CERT_DIR"
+
+# Check for environment variables that can cause problems
+for var in $SCARY_ENVVARS ; do
+    if env | grep $var >/dev/null ; then
+                echo "WARNING: $var can cause problems with $SCRIPT." >&2
+                echo "If you experience problems with $SCRIPT, please unset it." >&2
+        fi
+done
+
+CERT_SUBJECT=`grid-cert-info -subject`
+
+echo "Your identity: " $CERT_SUBJECT
+read -s -p "Enter GRID pass phrase for this identity: " gridpass
+echo ""
+read -s -p "Enter new MyProxy pass phrase: " myproxypass
+echo ""
+read -s -p "Confirm new MyProxy pass phrase: " myproxypassconfirmation
+echo ""
+
+if [ "$myproxypass" != "$myproxypassconfirmation" ] ; then
+
+    echo "Your passwords don't match. Please try again." >&2
+    exit 1
+fi
+
+if [ ${#myproxypass} -lt 6 ]; then
+    echo "Passphrase must be at least 6 characters long." >&2
+    exit 1
+fi
+    
+
+export gridpass myproxypass
+
+# Build condor credential
+echo "$gridpass" | myproxy-init -S -l $USER -R $CONDOR_CERT_DN -k "$CREDENTIAL_NAME" -d | grep "valid"
+
+echo "Talking to MyProxy server..."
+
+# Build regular myproxy credential
+echo "#!/usr/bin/expect
+spawn myproxy-init -L
+expect \"Enter GRID pass phrase for this identity:\" { send \"\$env(gridpass)\n\" }
+expect \"Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
+expect \"Verifying - Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
+expect eof
+" > $EXPECTSCRIPT
+chmod +x $EXPECTSCRIPT
+$EXPECTSCRIPT >/dev/null
+rm $EXPECTSCRIPT
+
+export GT_PROXY_MODE="rfc"
+# Build an RFC myproxy credential
+echo "#!/usr/bin/expect
+spawn myproxy-init -k rfc
+expect \"Enter GRID pass phrase for this identity:\" { send \"\$env(gridpass)\n\" }
+expect \"Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
+expect \"Verifying - Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
+expect eof
+" > $EXPECTSCRIPT
+chmod +x $EXPECTSCRIPT
+$EXPECTSCRIPT >/dev/null
+rm $EXPECTSCRIPT
+
+
+echo "myproxy-logon credential: '$MYPROXY_USER'"
+echo "myproxy-logon rfc credential: '$MYPROXY_USER' name: 'rfc'"
+echo "condor credential name: '$CREDENTIAL_NAME'"
+echo ""
+echo "Get a legacy proxy with 'myproxy-logon -l $MYPROXY_USER'"
+echo "Get an RFC 3820 proxy with 'myproxy-logon -l $MYPROXY_USER -k rfc'"
+echo "Put the following in your job for automatic credential renewal:"
+echo "  +CSMyProxyCredsName = $CREDENTIAL_NAME"
+echo "  +CSMyProxyServer = $MYPROXY_SERVER"
