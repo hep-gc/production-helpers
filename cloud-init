@@ -1,13 +1,10 @@
 #!/bin/sh
 set -e
-EXPECTSCRIPT=`mktemp`
+EXPECTSCRIPT=`mktemp /tmp/expect.XXXXXX`
 MYPROXY_USER=`whoami`
 CONDOR_CERT_DN="condor/condor.heprc.uvic.ca"
 CREDENTIAL_NAME="$MYPROXY_USER.condor"
 SCRIPT=`basename $0`
-
-#Needed until condor 7.5.7 comes out
-export GT_PROXY_MODE="old"
 
 SCARY_ENVVARS="GLOBUS_LOCATION X509_CERT_DIR"
 
@@ -24,6 +21,11 @@ CERT_SUBJECT=`grid-cert-info -subject`
 echo "Your identity: " $CERT_SUBJECT
 read -s -p "Enter GRID pass phrase for this identity: " gridpass
 echo ""
+
+# Verify Grid Password
+[[ -z $X509_USER_KEY ]] && X509_USER_KEY="$HOME/.globus/userkey.pem"
+echo $gridpass | openssl rsa -in $X509_USER_KEY -noout -passin stdin
+
 read -s -p "Enter new MyProxy pass phrase: " myproxypass
 echo ""
 read -s -p "Confirm new MyProxy pass phrase: " myproxypassconfirmation
@@ -44,11 +46,11 @@ fi
 export gridpass myproxypass
 
 # Build condor credential
-echo "$gridpass" | myproxy-init -S -l $USER -R $CONDOR_CERT_DN -k "$CREDENTIAL_NAME" -d | grep "valid"
+echo "$gridpass" | myproxy-init -S -R $CONDOR_CERT_DN -k "$CREDENTIAL_NAME" -d | grep "valid"
 
 echo "Talking to MyProxy server..."
 
-# Build regular myproxy credential
+# Build an RFC myproxy credential
 echo "#!/usr/bin/expect
 spawn myproxy-init -L
 expect \"Enter GRID pass phrase for this identity:\" { send \"\$env(gridpass)\n\" }
@@ -57,29 +59,21 @@ expect \"Verifying - Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\
 expect eof
 " > $EXPECTSCRIPT
 chmod +x $EXPECTSCRIPT
-$EXPECTSCRIPT >/dev/null
+$EXPECTSCRIPT | grep --after-context=10 ERROR && MYPROXYERROR="yes"
 rm $EXPECTSCRIPT
 
-export GT_PROXY_MODE="rfc"
-# Build an RFC myproxy credential
-echo "#!/usr/bin/expect
-spawn myproxy-init -k rfc
-expect \"Enter GRID pass phrase for this identity:\" { send \"\$env(gridpass)\n\" }
-expect \"Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
-expect \"Verifying - Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
-expect eof
-" > $EXPECTSCRIPT
-chmod +x $EXPECTSCRIPT
-$EXPECTSCRIPT >/dev/null
-rm $EXPECTSCRIPT
+if [ "$MYPROXYERROR" = "yes" ]; then
+    echo "Problem calling myproxy-init"
+    exit 1
+fi
 
 
 echo "myproxy-logon credential: '$MYPROXY_USER'"
-echo "myproxy-logon rfc credential: '$MYPROXY_USER' name: 'rfc'"
 echo "condor credential name: '$CREDENTIAL_NAME'"
 echo ""
-echo "Get a legacy proxy with 'myproxy-logon -l $MYPROXY_USER'"
-echo "Get an RFC 3820 proxy with 'myproxy-logon -l $MYPROXY_USER -k rfc'"
+echo "Get a proxy with 'myproxy-logon -l $MYPROXY_USER'"
+echo ""
 echo "Put the following in your job for automatic credential renewal:"
 echo "  +CSMyProxyCredsName = $CREDENTIAL_NAME"
 echo "  +CSMyProxyServer = $MYPROXY_SERVER"
+
