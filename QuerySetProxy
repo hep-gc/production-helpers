@@ -1,0 +1,57 @@
+#!/bin/bash
+	if [[ ${1:0:1} != "-" ]]; then exit; fi
+
+	if [[ $1 == "-h" || $1 == "--help" || $1 == "-help" ]]; then
+		echo 'Use QuerySetProxy to ensure you have valid X509 credentials. QuerySetProxy'
+		echo 'performs the following:'
+		echo
+		echo 'o Checks to see if it is called from a login shell (first argument begins'
+		echo '  with "-"). If not, the command will exit to avoid interfering with'
+		echo '  remote shell commands (i.e. scp)'
+		echo 'o Queries both the local (grid-proxy-info) and long-lived (myproxy-info)'
+		echo '  proxy information to check for valid credentials.'
+		echo 'o If either of the credentials has expired, calls the appropriate command'
+		echo '  (either cloud-init or myproxy-logon) to renew them.'
+		echo 'o Formats and displays the remaining time for both credentials.'
+		echo
+		echo 'This command is intended to be used from your .bashrc as follows:'
+		echo
+		echo '  if [ -f /usr/local/bin/QuerySetProxy ]; then'
+		echo '      /usr/local/bin/QuerySetProxy $0'
+		echo '  fi'
+
+		echo
+		echo 'but can be executed from the command line with:'
+		echo
+		echo '  /usr/local/bin/QuerySetProxy -'
+		echo
+		echo 'Specifying an argument of "-h" or "--help" or even "-help" will display'
+		echo 'these messages".'
+		exit
+	fi
+
+	set -e
+
+	mp=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[    2]*60)+words[3]}'`
+	if [[ $mp != "" && $mp > 0 ]]; then
+		mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
+		if [[ $mp == "" ]]; then
+			cloud-init
+			mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
+		fi
+		now=`date +%s`
+		echo $(($now+$mp-(12*3600))) >$HOME/.QuerySetProxy
+	elif [[ $mp < 1 ]]; then 
+		now=`date +%s`
+		eot=$(< $HOME/.QuerySetProxy)
+		if [[ $eot == "" || $eot < $now ]]; then
+			cloud-init
+		else
+			myproxy-logon
+		fi
+	fi
+
+	echo 
+	echo "Time left for proxy certificates:"
+	myproxy-info | awk '/timeleft/ {print sprintf("     myproxy cert = %10s %-12s", $2, $3 " " $4)}'
+	grid-proxy-info | awk '/timeleft/ {print sprintf("       local cert = %10s %-12s\n",$3, " ")}'
