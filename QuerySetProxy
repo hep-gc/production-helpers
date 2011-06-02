@@ -43,7 +43,13 @@
 		echo $(($now+$mp-(12*3600))) >$HOME/.QuerySetProxy
 	elif [[ $mp < 1 ]]; then 
 		now=`date +%s`
-		eot=$(< $HOME/.QuerySetProxy)
+
+		if [ -f $HOME/.QuerySetProxy ]; then 
+			eot=$(< $HOME/.QuerySetProxy)
+		else
+			eot=""
+		fi
+
 		if [[ $eot == "" || $eot < $now ]]; then
 			cloud-init
 		else
