@@ -10,8 +10,10 @@
 		echo '  remote shell commands (i.e. scp)'
 		echo 'o Queries both the local (grid-proxy-info) and long-lived (myproxy-info)'
 		echo '  proxy information to check for valid credentials.'
-		echo 'o If either of the credentials has expired, calls the appropriate command'
-		echo '  (either cloud-init or myproxy-logon) to renew them.'
+		echo 'o If either of the credentials has expired, or the local proxy has less'
+		echo '  then 3 hours to live, or the long-lived proxy has less than 12 hours to'
+		echo '  live, calls the appropriate command (either cloud-init or myproxy-logon)'
+		echo '  to renew them.'
 		echo 'o Formats and displays the remaining time for both credentials.'
 		echo
 		echo 'This command is intended to be used from your .bashrc as follows:'
@@ -30,30 +32,27 @@
 		exit
 	fi
 
-	set -e
+	gp_min_time_to_live=10800 # 3 hours
+	mp_min_time_to_live=43200 # 12 hours
 
-	mp=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[    2]*60)+words[3]}'`
-	if [[ $mp != "" && $mp > 0 ]]; then
+#	Re-initialize the MyProxy certificate if it has less than 12 hours to live.
+	gp=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[    2]*60)+words[3]}'`
+	if [[ $gp != "" && $gp > 0 ]]; then
 		mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
-		if [[ $mp == "" ]]; then
+		if [[ $mp == "" || $mp < $mp_min_time_to_live ]]; then
+			set -e
 			cloud-init
-			mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
 		fi
-		now=`date +%s`
-		echo $(($now+$mp-(12*3600))) >$HOME/.QuerySetProxy
-	elif [[ $mp < 1 ]]; then 
-		now=`date +%s`
+	fi
 
-		if [ -f $HOME/.QuerySetProxy ]; then 
-			eot=$(< $HOME/.QuerySetProxy)
-		else
-			eot=""
-		fi
-
-		if [[ $eot == "" || $eot < $now ]]; then
+#	Re-initialize the local certificate if it has less than 3 hours to live.
+	if [[ $gp == "" || $gp < $gp_min_time_to_live ]]; then 
+		myproxy-logon
+		
+		mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
+		if [[ $mp == "" || $mp < 43200 ]]; then
+			set -e
 			cloud-init
-		else
-			myproxy-logon
 		fi
 	fi
 
