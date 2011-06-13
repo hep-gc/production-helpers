@@ -36,21 +36,21 @@
 	mp_min_time_to_live=43200 # 12 hours
 
 #	Re-initialize the MyProxy certificate if it has less than 12 hours to live.
-	gp=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[    2]*60)+words[3]}'`
-	if [[ $gp != "" && $gp > 0 ]]; then
-		mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
-		if [[ $mp == "" || $mp < $mp_min_time_to_live ]]; then
+	declare -i gp=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[    2]*60)+words[3]}'`
+	if (($gp > 0)); then
+		declare -i mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
+		if (($mp < $mp_min_time_to_live)); then
 			set -e
 			cloud-init
 		fi
 	fi
 
 #	Re-initialize the local certificate if it has less than 3 hours to live.
-	if [[ $gp == "" || $gp < $gp_min_time_to_live ]]; then 
+	if (($gp < $gp_min_time_to_live)); then 
 		myproxy-logon
 		
-		mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
-		if [[ $mp == "" || $mp < 43200 ]]; then
+		declare -i mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
+		if (($mp < $mp_min_time_to_live)); then
 			set -e
 			cloud-init
 		fi
