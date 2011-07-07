@@ -33,7 +33,7 @@
 	fi
 
 	gp_min_time_to_live=10800 # 3 hours
-	mp_min_time_to_live=43200 # 12 hours
+	mp_min_time_to_live=604800 # 168 hours
 
 #	Re-initialize the MyProxy certificate if it has less than 12 hours to live.
 	declare -i gp=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[    2]*60)+words[3]}'`

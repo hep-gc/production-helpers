@@ -52,7 +52,7 @@ echo "Talking to MyProxy server..."
 
 # Build an RFC myproxy credential
 echo "#!/usr/bin/expect
-spawn myproxy-init -L
+spawn myproxy-init -L -c 336
 expect \"Enter GRID pass phrase for this identity:\" { send \"\$env(gridpass)\n\" }
 expect \"Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
 expect \"Verifying - Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
