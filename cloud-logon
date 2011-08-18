@@ -1,3 +1,8 @@
 #!/bin/bash
 # An alias for interactive cloud-bashrc.
-	cloud-bashrc -
+	if [[ $@ == '' ]]; then
+		cloud-bashrc -
+	else
+		cloud-bashrc $@
+	fi
+
