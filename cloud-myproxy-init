@@ -1,0 +1,81 @@
+#!/bin/sh
+# Create long-lived proxy certificates within a MyProxy server for both interactive and batch use. This script is
+# intended to be called from the cloud-bashrc/cloud-logon scripts.
+
+set -e
+EXPECTSCRIPT=`mktemp /tmp/expect.XXXXXX`
+MYPROXY_USER=`whoami`
+CONDOR_CERT_DN="condor/condor.heprc.uvic.ca"
+CREDENTIAL_NAME="$MYPROXY_USER.condor"
+SCRIPT=`basename $0`
+
+SCARY_ENVVARS="GLOBUS_LOCATION X509_CERT_DIR"
+
+# Check for environment variables that can cause problems
+for var in $SCARY_ENVVARS ; do
+    if env | grep $var >/dev/null ; then
+                echo "WARNING: $var can cause problems with $SCRIPT." >&2
+                echo "If you experience problems with $SCRIPT, please unset it." >&2
+        fi
+done
+
+CERT_SUBJECT=`grid-cert-info -subject`
+
+echo "Your identity: " $CERT_SUBJECT
+read -s -p "Enter GRID pass phrase for this identity: " gridpass
+echo ""
+
+# Verify Grid Password
+[[ -z $X509_USER_KEY ]] && X509_USER_KEY="$HOME/.globus/userkey.pem"
+echo $gridpass | openssl rsa -in $X509_USER_KEY -noout -passin stdin
+
+read -s -p "Enter new MyProxy pass phrase: " myproxypass
+echo ""
+read -s -p "Confirm new MyProxy pass phrase: " myproxypassconfirmation
+echo ""
+
+if [ "$myproxypass" != "$myproxypassconfirmation" ] ; then
+
+    echo "Your passwords don't match. Please try again." >&2
+    exit 1
+fi
+
+if [ ${#myproxypass} -lt 6 ]; then
+    echo "Passphrase must be at least 6 characters long." >&2
+    exit 1
+fi
+    
+echo "Talking to MyProxy server..."
+
+export gridpass myproxypass
+
+# Build condor credential
+echo "$gridpass" | myproxy-init -c 336 -S -R $CONDOR_CERT_DN -k "$CREDENTIAL_NAME" -d | grep "valid"
+
+# Build an RFC myproxy credential
+echo "#!/usr/bin/expect
+spawn myproxy-init -L -c 336
+expect \"Enter GRID pass phrase for this identity:\" { send \"\$env(gridpass)\n\" }
+expect \"Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
+expect \"Verifying - Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
+expect eof
+" > $EXPECTSCRIPT
+chmod +x $EXPECTSCRIPT
+$EXPECTSCRIPT | grep --after-context=10 ERROR && MYPROXYERROR="yes"
+rm $EXPECTSCRIPT
+
+if [ "$MYPROXYERROR" = "yes" ]; then
+    echo "Problem calling myproxy-init"
+    exit 1
+fi
+
+
+echo "myproxy-logon credential: '$MYPROXY_USER'"
+echo "condor credential name: '$CREDENTIAL_NAME'"
+echo ""
+echo "To get or renew your proxy, issue 'cloud-logon'"
+echo ""
+echo "Put the following into your Condor job file for automatic credential renewal in the batch environment:"
+echo "  +CSMyProxyCredsName = $CREDENTIAL_NAME"
+echo "  +CSMyProxyServer = $MYPROXY_SERVER"
+

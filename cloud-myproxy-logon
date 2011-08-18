@@ -1,0 +1,25 @@
+#!/bin/sh
+# Attempt to renew an x509 proxy certificate from the MyProxy server. This script is intended to be called from the
+# cloud-bashrc/cloud-logon scripts.
+set -e
+EXPECTSCRIPT=`mktemp /tmp/expect.XXXXXX`
+
+read -s -p "Enter MyProxy pass phrase: " myproxypass
+echo ""
+
+export myproxypass
+
+# Build and issue a myproxy-logon request.
+echo "#!/usr/bin/expect
+spawn myproxy-logon
+expect \"Enter MyProxy pass phrase:\" { send \"\$env(myproxypass)\n\" }
+expect eof
+" > $EXPECTSCRIPT
+chmod +x $EXPECTSCRIPT
+$EXPECTSCRIPT | grep 'A credential has been received for user' >/dev/null || MYPROXYERROR="yes"
+rm $EXPECTSCRIPT
+
+if [ "$MYPROXYERROR" = "yes" ]; then
+	echo 'No credentials exist for username "'`whoami`'".'
+    exit 1
+fi

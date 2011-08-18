@@ -1,0 +1,3 @@
+#!/bin/bash
+# An alias for interactive cloud-bashrc.
+	cloud-bashrc -
