@@ -11,9 +11,9 @@
 		echo 'o Queries both the local (grid-proxy-info) and long-lived (myproxy-info)'
 		echo '  proxy information to check for valid credentials.'
 		echo 'o If either of the credentials has expired, or the local proxy has less'
-		echo '  then 3 hours to live, or the long-lived proxy has less than 12 hours to'
-		echo '  live, calls the appropriate command (either cloud-init or myproxy-logon)'
-		echo '  to renew them.'
+		echo '  then 3 hours to live, or the long-lived proxy has less than 168 hours'
+		echo '  to live, calls the appropriate command (either cloud-myproxy-init or'
+        echo '  cloud-myproxy-logon) to renew them.'
 		echo 'o Formats and displays the remaining time for both credentials.'
 		echo
 		echo 'This command is intended to be used from your .bashrc as follows:'
