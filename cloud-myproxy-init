@@ -11,12 +11,9 @@ SCRIPT=`basename $0`
 
 SCARY_ENVVARS="GLOBUS_LOCATION X509_CERT_DIR"
 
-# Check for environment variables that can cause problems
+# Unset variables within this commands environment that can cause problems
 for var in $SCARY_ENVVARS ; do
-    if env | grep $var >/dev/null ; then
-                echo "WARNING: $var can cause problems with $SCRIPT." >&2
-                echo "If you experience problems with $SCRIPT, please unset it." >&2
-        fi
+    unset $var
 done
 
 CERT_SUBJECT=`grid-cert-info -subject`
