@@ -11,11 +11,35 @@ SCRIPT=`basename $0`
 
 SCARY_ENVVARS="GLOBUS_LOCATION X509_CERT_DIR"
 
-# Unset variables within this commands environment that can cause problems
+# Check for environment variables that can cause problems
 for var in $SCARY_ENVVARS ; do
-    unset $var
+	unset $var
 done
 
+# Check the validity of the user's certificate and warn the user some weeks ($WEEKS variable) before it needs to be renewwed.
+declare -i WEEKS=4
+declare -i WARNING_PERIOD=$WEEKS*7*24*60*60 # three weeks
+declare -i NOW=`date +%s`
+declare -i CERT_START_DATE=`grid-cert-info -sd | date -f - +%s`
+declare -i CERT_END_DATE=`grid-cert-info -ed | date -f - +%s`
+declare -i WARNING_DATE=$CERT_END_DATE-$WARNING_PERIOD
+
+if (( $NOW < $CERT_START_DATE )); then
+	echo 'ERROR: Your grid certificate is not valid until ' `grid-cert-info -sd`
+	exit
+fi
+
+if (( $NOW >= $WARNING_DATE )); then
+	echo 'WARNING!'
+	echo 'WARNING!'
+	echo 'WARNING!'
+	echo 'WARNING: Your grid certificate will expire on' `grid-cert-info -ed` '(less than' $WEEKS 'weeks). You should renew it immediately!'
+	echo 'WARNING!'
+	echo 'WARNING!'
+	echo 'WARNING!'
+fi
+
+# Prompt for grid cert pass phrase.
 CERT_SUBJECT=`grid-cert-info -subject`
 
 echo "Your identity: " $CERT_SUBJECT
