@@ -8,6 +8,10 @@ and require the user to set the MYPROXY_SERVER environment variable to indicate 
 cloud-bashrc            - A login script to be executed from the users .bachrc to query 
                           and renew local proxy certificates.
 
+cloud-cernvm-setup      - Script to set up cloud environment in a base CernVM. The file
+                          does not have execute permissions because it MUST be sourced, 
+                          ie. ". cloud-cernvm-setup".
+
 cloud-init              - Deprecated - replaced by cloud-myproxy-init.
 
 cloud-logon             - An interactive version of cloud-bashrc. Issuing "cloud-logon -h"
