@@ -9,12 +9,13 @@ CONDOR_CERT_DN="condor/condor.heprc.uvic.ca"
 CREDENTIAL_NAME="$MYPROXY_USER.condor"
 SCRIPT=`basename $0`
 
-SCARY_ENVVARS="GLOBUS_LOCATION X509_CERT_DIR"
-
-# Check for environment variables that can cause problems
-for var in $SCARY_ENVVARS ; do
-	unset $var
-done
+# If not running in CernVM, unset environment variables that can cause problems.
+if [[ ! -e /cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase/x86_64/gLite/3.2.8-0.sl5/globus/bin ]]; then
+	SCARY_ENVVARS="GLOBUS_LOCATION X509_CERT_DIR"
+	for var in $SCARY_ENVVARS ; do
+		unset $var
+	done
+fi 
 
 # Check the validity of the user's certificate and warn the user some weeks ($WEEKS variable) before it needs to be renewwed.
 declare -i WEEKS=4
