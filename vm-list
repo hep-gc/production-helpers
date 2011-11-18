@@ -1,0 +1,231 @@
+#!/usr/bin/perl
+	$ENV{'PATH'} = '/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin';
+
+	$xml_template = '<WORKSPACE_EPR xsi:type="ns1:EndpointReferenceType" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns1="http://schemas.xmlsoap.org/ws/2004/03/addressing">
+						<ns1:Address xsi:type="ns1:AttributedURI">https://%s/wsrf/services/WorkspaceService</ns1:Address>
+						<ns1:ReferenceProperties xsi:type="ns1:ReferencePropertiesType">
+							<ns2:WorkspaceKey xmlns:ns2="http://www.globus.org/2008/06/workspace">%s</ns2:WorkspaceKey>
+						</ns1:ReferenceProperties>
+						<ns1:ReferenceParameters xsi:type="ns1:ReferenceParametersType"/>
+					</WORKSPACE_EPR>';
+
+	$Opt{'cloud'}{'value'} = 'nrc'; 
+	$Opt{'kill'}{'value'} = ''; 
+	$Opt{'type'}{'value'} = 'N'; 
+
+	for ($i=0; $i<=$#ARGV; $i++) {
+		if ($ARGV[$i] eq '-a' || $ARGV[$i] eq '--all') {
+			$Opt{'cloud'}{'value'} = 'all';
+			$Opt{'type'}{'value'} = 'all';
+			}
+
+		elsif ($ARGV[$i] eq '-c' || $ARGV[$i] eq '--cloud') {
+			$Opt{'cloud'}{'value'} = lowercase(get_option_value());
+			if ($Opt{'cloud'}{'value'} eq '') {
+				print "vm-list: The value for the '--cloud' option was omitted. One of the following may be specified:\n\n";
+				system("cloud_status | awk '!/Resources:|NETWORK/ {print \"   \" \$1}'");
+				print "or 'all' to query all configured clouds.\n\n";
+				exit;
+				}
+			}
+
+		elsif ($ARGV[$i] eq '-h' || $ARGV[$i] eq '--help') {
+			print "Use the 'vm-list' command to list, and optionally kill, running VMs.\n\n";
+			print "Synopsis: vm-list -h | --help\n\n";
+			print "          vm-list -a | --all [ -k | --kill [<vm_ids> ] ]\n\n";
+			print "          vm-list [ -c | --cloud <cloud_id> ] [ -t | --type <vm_type> ] [ -k | --kill [<vm_ids> ] ]\n\n";
+			print "Calling 'vm-list' without parameters is equivalent to 'vm-list -c nrc -t interactive. Calling\n";
+			print "'vm-list' with the '--all' option is equivalent to 'vm-list -c all -t all'. Envoking the command without\n"; 
+			print "the '--kill' option will only produce a display of VMs. Specifying anything other than '?' for the\n";
+			print "'--kill' option will kill VMs but not produce the listing.\n\n";
+			print "The vm-kill is an alias for and accepts the same parameters as the 'vm-list' command. By default,\n";
+			print "calling 'vm-kill' with no paramateres is equivalent to 'vm-list -k ?'.\n\n";
+			print "Additional help for a specific option, can be displayed by specifying the option but no value, eg.\n";
+			print "'vm-kill -c' will display additional help for the '--cloud' option.\n\n";
+			exit;
+			}
+
+		elsif ($ARGV[$i] eq '-k' || $ARGV[$i] eq '--kill') {
+			$Opt{'kill'}{'value'} = get_option_value();
+			if ($Opt{'kill'}{'value'} eq '') {
+				print "vm-list: The value for the '--kill' option was omitted. One of the following may be specified:\n\n";
+				print "   '?' to receive prompts for the VMs to be killed\n";
+				print "   'all' to kill all VMs\n";
+				print "   comma separated list of ID numbers\n\n";
+				print "All the above options respect the currently specified cloud and type values.\n";
+				exit;
+				}
+			}
+
+		elsif ($ARGV[$i] eq '-t' || $ARGV[$i] eq '--type') { 
+			$x = lowercase(get_option_value());
+			if ($x eq 'all') { $Opt{'type'}{'value'} = 'all'; }
+			elsif ($x eq 'b' || $x eq 'batch') { $Opt{'type'}{'value'} = 'Y'; }
+			elsif ($x eq 'i' || $x eq 'interactive') { $Opt{'type'}{'value'} = 'N'; }
+			else {
+				print "vm-list: The value for the '--type' option was omitted or invalid. One of the following may be specified:\n\n";
+				print "   'b' or 'batch' for batch VMs started by Cloud Scheduler only.\n";
+				print "   'i' or 'interactive' for interactive VMs only. This is the default.\n\n";
+				print "or 'all' to display all types of VMs.\n\n";
+				exit;
+				}
+			}
+
+		else {
+			print "vm-list: '$ARGV[$i]' was an unrecognized option.\n";
+			exit;
+			}
+		}
+
+	$cloud_client = '/opt/nimbus-cloud-client/bin/cloud-client.sh';
+	if (!(-e $cloud_client)) {
+		print "The Nimbus cloud client was not found. It must be installed in the /opt directory.\n";
+		exit;
+	}
+
+	$workspace_client = '/opt/nimbus-cloud-client/lib/workspace.sh';
+	if (!(-e $cloud_client)) {
+		print "The Nimbus 'workspace.sh' was not found. The Nimbus cloud client must be installed in the /opt directory.\n";
+		exit;
+	}
+
+	$x=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split(\$3, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`;
+	if ($x < 300) {
+		system('cloud-logon');
+		}
+
+	$tempfile = `mktemp`;
+	chop($tempfile);
+
+	$vm[0] = 0;
+	@clouds = `cloud_status | awk '/\\\./ {print \$1 " " \$3}'`;
+
+	@x = `cloud_status -m | awk '/^[0-9]/ {print \$1}'`;
+	for ($i=0; $i<=$#x; $i++) {
+		chop($x[$i]);
+		}
+	$batch_vms = join(' ', @x);
+
+	foreach $x (@clouds) {
+		($cloud_id, $cloud_fqn) = split(/[\s\n]+/, $x);
+		next if $Opt{'cloud'}{'value'} ne 'all' && $Opt{'cloud'}{'value'} ne lowercase($cloud_id);
+
+		system("echo '\nvws.factory=$cloud_fqn\n' >$tempfile"); 
+		@x = `$cloud_client \-\-conf $tempfile \-\-status 2\>/dev/null |
+			awk '/Workspace #|Start time|State/ {
+				if (\$3=="Workspace") {id=substr(\$4,2,length(\$4)-2); fqn=\$7;}
+				if (\$1=="State:") {state=\$2;}
+				if (\$1=="Start") {print id " " fqn " " state " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8}
+				}'`;
+
+		for ($i=0; $i<=$#x; $i++) {
+			chop($x[$i]);
+			@y = split(/[\s]+/, $x[$i], 4);
+			$batch_or_interactive = 'N';
+			$batch_or_interactive = 'Y' if index(" $y[0] ", " $batch_vms ") > -1;
+
+			next if $Opt{'type'}{'value'} ne 'all' && $Opt{'type'}{'value'} ne $batch_or_interactive;
+			
+			$vm[0]++;
+			$j = $vm[0];
+			$vm[$j]{'vm_id'} = $y[0];
+			$vm[$j]{'vm_fqn'} = $y[1];
+			$vm[$j]{'vm_batch'} = $batch_or_interactive;
+			$vm[$j]{'vm_state'} = $y[2];
+			$vm[$j]{'vm_start_date'} = $y[3];
+			$vm[$j]{'cloud_id'} = $cloud_id;
+			$vm[$j]{'cloud_fqn'} = $cloud_fqn;
+
+			$xr{$vm[$j]{'vm_id'}} = $j;
+		}
+
+	}
+
+	if ($vm[0]>0) {
+		if ($Opt{'kill'}{'value'} eq '' || $Opt{'kill'}{'value'} eq '?') {
+			printf ("%4s %-32s %-6s %-12s %-12s %s\n", 'Item', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Start Time');
+			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '----', '--------------------------------', '------', '------------', '------------', '--------------------------------');
+			for ($i=1; $i<=$vm[0]; $i++) {
+				printf ("%4d %-32s %3s    %-12s %-12s %s\n", $i, $vm[$i]{'vm_fqn'}, $vm[$i]{'vm_batch'}, $vm[$i]{'vm_state'}, $vm[$i]{'cloud_id'}, $vm[$i]{'vm_start_date'});
+				}
+			}
+
+
+		if ($Opt{'kill'}{'value'} eq '?') {
+			print "\nEnter a comma separated list of item numbers to be killed, or 'all' to kill all VMs, or null ('') to exit:\n";
+			$vm_list = readline STDIN;
+			KillList($vm_list);
+
+		} elsif ($Opt{'kill'}{'value'} eq 'all') {
+			for ($i=1; $i<=$vm[0]; $i++) {
+				KillVM($i, 'shutdown');
+				}
+
+			for ($i=1; $i<=$vm[0]; $i++) {
+				KillVM($i, 'kill');
+				}
+
+		} elsif ($Opt{'kill'}{'value'} ne '') {
+			KillList($Opt{'kill'}{'value'});
+			}
+
+	} else {
+	    if ($Opt{'type'}{'value'} eq 'N') {
+			print "You have no interactive VMs running on the specified clouds.\n";
+	    } elsif ($Opt{'type'}{'value'} eq 'Y') {
+			print "You have no batch VMs running on the specified clouds.\n";
+	    } else {
+			print "You have no VMs running on the specified clouds.\n";
+		}
+	}
+
+	system("rm -rf $tempfile\*");
+	exit;
+
+sub get_option_value {
+   my $ix = $i + 1;
+   return '' if $ix > $#ARGV || substr($ARGV[$ix],0,1) eq '-';
+   $i++;
+   return $ARGV[$i];
+}
+
+sub KillList {
+	my @list = split(/[,\n]+/, shift());
+	foreach $vm (@list) {
+		KillVM($vm, 'shutdown');
+	}
+
+	foreach $vm (@list) {
+		KillVM($vm, 'kill');
+	}
+	return;
+}
+
+sub KillVM {
+	my $vm = shift();
+	my $opt = shift();
+	
+	if ($vm ne '' && $opt ne '') {
+		open(XML, ">$tempfile");
+		printf (XML $xml_template, $vm[$vm]{'cloud_fqn'}, $vm[$vm]{'vm_id'});
+		close(XML);
+
+		if ($opt eq 'shutdown') {
+			system("$workspace_client -e $tempfile --shutdown");
+			$vm[$vm]{'vm_shutdown_time'} = time();
+
+		} else {
+			$shutdown_time = 9 + $vm[$vm]{'vm_shutdown_time'} - time();
+			sleep $shutdown_time if $shutdown > 0;
+			system("$workspace_client -e $tempfile --destroy");
+		}
+	}
+
+	return;
+}
+
+sub lowercase {
+	my $opt = shift();
+	$opt =~ tr/[A-Z]/[a-z]/;
+	return $opt;
+}
