@@ -1,0 +1,310 @@
+#!/bin/bash
+# vm-run-simple - create a VM from the command line
+
+# By default, we assume this will be installed in the cloud-client
+# bin directory. If it isn't you'll want to point to your cloud-client
+# install here.
+#CLOUD_CLIENT_PATH=$(cd `dirname $0`/../ && echo `pwd -P`)
+CLOUD_CLIENT_PATH=/opt/nimbus-cloud-client
+WORKSPACE=$CLOUD_CLIENT_PATH/lib/workspace.sh
+
+#CONFIGURABLE DEFAULTS
+CLOUD=example.com
+NETWORK=public
+RAM=1024
+CPUS=1
+BLANKSPACE=102400
+ARCH=x86
+IMAGE=http://example.com/vms/sl54base_i386.img.gz
+ATTACH=sda
+LIFETIME=2880
+SSHUSER=root
+#AUTHZKEYS=/root/.ssh/authorized_keys
+
+# If this file exists, it will override the settings set above
+CONFIG_PATH=$CLOUD_CLIENT_PATH/conf
+DEFAULT_CONFIG=$CONFIG_PATH/default.helperconf
+OTHER_CLOUD_CONFIGS=$CONFIG_PATH/clouds
+
+
+
+
+# SCRIPT BEGINS:
+SCRIPT=`basename $0`
+DATESTAMP=`date +%s`
+NIMBUSFILE=/tmp/nimbus.${DATESTAMP}.xml
+DEPLOYMENTFILE=/tmp/nimbus.deployment.${DATESTAMP}.xml
+OPTIONALFILE=/tmp/nimbus.optional.${DATESTAMP}.xml
+EPRFILE=/tmp/nimbus.${DATESTAMP}.epr
+
+USAGE="Usage:
+`basename $0` [options]
+
+Options:
+[-i|--image http://host/imagename.img.gz]
+[-d|--disk-attach-point sda]
+[-s|--sshpub path/to/sshpubkey]
+[-l|--sshuser username]
+[-z|--authorized-keys-on-vm path/to/authz-keys]
+[-u|--userproxy path/to/userproxy]
+[-t|--http-prop-cred path/to/credential]
+[-n|--network private|public]
+[-r|--ram raminMB]
+[-p|--cpus n]
+[-b|--blank-space spaceinMB]
+[-a|--arch x86|x86_64]
+[-c|--cloud hostname.of.cloud.cluster]
+[-w|--lifetime n]
+[-h|--help]"
+
+function list_clouds {
+
+	echo "Clouds available:"
+	for cloud_conf in `ls $OTHER_CLOUD_CONFIGS/*.helperconf` ; do
+		. $cloud_conf
+		echo "$CLOUD"
+	done
+}
+
+if [ ! -e $WORKSPACE ]; then
+	echo 'Nimbus cloud client must be installed in /opt.'
+	exit
+fi
+
+# Parse command line arguments
+while [ "$1" != "" ]; do
+    case $1 in
+	list )                  list_clouds
+                                exit 0
+                                ;;
+        -i | --image )          shift
+                                image=$1
+                                ;;
+        -d | --disk-attach-point ) shift
+                                attach=$1
+                                ;;
+        -s | --sshpub )         shift
+                                sshpub=$1
+                                ;;
+        -l | --sshuser )        shift
+                                sshuser=$1
+                                ;;
+        -z | --authorized-keys-on-vm )        shift
+                                authzkeys=$1
+                                ;;
+        -u | --userproxy )      shift
+                                userproxy=$1
+                                ;;
+        -t | --http-prop-cred ) shift
+                                httppropagationcred=$1
+                                ;;
+        -n | --network )        shift
+                                network=$1
+                                ;;
+        -r | --ram )            shift
+                                ram=$1
+                                ;;
+        -p | --cpus )           shift
+                                cpus=$1
+                                ;;
+        -b | --blank-space )    shift
+                                blankspace=$1
+                                ;;
+        -a | --arch )            shift
+                                arch=$1
+                                ;;
+        -c | --cloud )          shift
+                                cloud=$1
+                                ;;
+        -w | --lifetime )       shift
+                                lifetime=$1
+                                ;;
+        -h | --help )           echo "$USAGE"
+                                exit
+                                ;;
+        * )                     echo "$USAGE"
+                                exit 1
+    esac
+    shift
+done
+
+# Get overriding cloud configs
+if [ -n $cloud ] && [ -f "$OTHER_CLOUD_CONFIGS/$cloud.helperconf" ]; then
+	. $OTHER_CLOUD_CONFIGS/$cloud.helperconf
+elif [ -f "$DEFAULT_CONFIG" ] ; then
+	. $DEFAULT_CONFIG
+fi
+
+
+# Set defaults
+[ "$cloud" ] || cloud=$CLOUD
+[ "$ram" ] || ram=$RAM
+[ "$arch" ] || arch=$ARCH
+[ "$cpus" ] || cpus=$CPUS
+[ "$blankspace" ] || blankspace=$BLANKSPACE
+[ "$image" ] || image=$IMAGE
+[ "$attach" ] || attach=$ATTACH
+[ "$network" ] || network=$NETWORK
+[ "$lifetime" ] || lifetime=$LIFETIME
+[ "$sshuser" ] || sshuser=$SSHUSER
+[ "$authzkeys" ] || [ "$AUTHZKEYS" ] || authzkeys=$AUTHZKEYS
+
+
+
+if [ $attach == "sda" ]; then
+    blankattach="sdb"
+elif [ $attach == "sda1" ]; then
+    blankattach="sda2"
+else
+    echo "I don't know about attach point '$attach'. Guessing 'sdb'." >&2
+    blankattach="sdb"
+fi
+
+optional_contents=""
+# Build Optional File
+if [ "${authzkeys}" ] ; then
+    SSHPATH="$authzkeys"
+elif [ "${sshuser}" = "root" ] ; then
+    SSHPATH="/root/.ssh/authorized_keys"
+else
+    SSHPATH="/home/${sshuser}/.ssh/authorized_keys"
+fi
+
+if [ ${sshpub} ]; then
+    optional_contents="$optional_contents
+<filewrite>
+  <content>$(cat $sshpub)</content>
+  <pathOnVM>${SSHPATH}</pathOnVM>
+</filewrite>"
+fi
+
+if [ ${userproxy} ]; then
+    optional_contents="$optional_contents
+<filewrite>
+  <content>$(cat $userproxy)</content>
+  <pathOnVM>/tmp/x509up_u0</pathOnVM>
+</filewrite>"
+fi
+
+if [ ${httppropagationcred} ]; then
+    optional_contents="$optional_contents
+<credentialToCopy>$(cat $userproxy)</credentialToCopy>"
+fi
+OPTIONALXML="<OptionalParameters>${optional_contents}</OptionalParameters>"
+echo "$OPTIONALXML" > $OPTIONALFILE
+
+# Write XML File
+NIMBUSXML="<?xml version='1.0' encoding='UTF-8'?>
+<VirtualWorkspace
+    xmlns='http://www.globus.org/2008/06/workspace/metadata'
+    xmlns:def='http://www.globus.org/2008/06/workspace/metadata/definition'
+    xmlns:log='http://www.globus.org/2008/06/workspace/metadata/logistics'
+    xmlns:jsdl='http://schemas.ggf.org/jsdl/2005/11/jsdl'
+    xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' >
+
+    <!-- name is an arbitrary URI -->
+    <name>http://${cloud}/`basename ${image}`</name>
+
+    <log:logistics>
+        <log:networking>
+            <log:nic>
+                <log:name>eth0</log:name>
+                <log:ipConfig>
+                    <log:acquisitionMethod>AllocateAndConfigure</log:acquisitionMethod>
+                </log:ipConfig>
+
+                <!--
+                The association string allows you to associate the NIC with
+                specific networking contexts (a common example is a string
+                which resolves to which network to bridge the virtual NIC
+                to; a simple scheme would be 'public' vs. 'private'.
+                Another example is VPN).  A site will advertise the
+                available assocations in the workspace factory resource
+                properties (to query with the sample client, use the
+                factoryrp option).
+                -->
+                <log:association>${network}</log:association>
+            </log:nic>
+        </log:networking>
+    </log:logistics>
+
+    <def:definition>
+        <def:requirements>
+            <jsdl:CPUArchitecture>
+                <jsdl:CPUArchitectureName>${arch}</jsdl:CPUArchitectureName>
+            </jsdl:CPUArchitecture>
+            <def:VMM>
+                <def:type>Xen</def:type>
+                <def:version>3</def:version>
+            </def:VMM>
+        </def:requirements>
+        <def:diskCollection>
+            <def:rootVBD>
+                <!--
+                Relative path names like in this example will be resolved
+                relative to the deployment node's local image repository
+                -->
+                <def:location>${image}</def:location>
+                <def:mountAs>${attach}</def:mountAs>
+                <def:permissions>ReadWrite</def:permissions>
+            </def:rootVBD>
+            <def:blankspacePartition>
+                <def:partitionName>blankdisk1</def:partitionName>
+                <def:mountAs>${blankattach}</def:mountAs>
+            </def:blankspacePartition>
+        </def:diskCollection>
+    </def:definition>
+</VirtualWorkspace>"
+echo "$NIMBUSXML" > $NIMBUSFILE
+
+NIMBUSDEPLOYMENT="<?xml version='1.0' encoding='UTF-8'?>
+<WorkspaceDeployment
+    xmlns='http://www.globus.org/2008/06/workspace/negotiable'
+    xmlns:jsdl='http://schemas.ggf.org/jsdl/2005/11/jsdl'
+    xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' >
+
+    <DeploymentTime>
+        <!-- xsd:duration syntax. This example == 30 minutes -->
+        <minDuration>PT8H</minDuration>
+    </DeploymentTime>
+    <InitialState>Running</InitialState>
+    <ShutdownMechanism>Trash</ShutdownMechanism>
+    <ResourceAllocation>
+        <jsdl:IndividualPhysicalMemory>
+            <jsdl:Exact>${ram}</jsdl:Exact>
+        </jsdl:IndividualPhysicalMemory>
+        <jsdl:IndividualCPUCount>
+            <jsdl:Exact>${cpus}</jsdl:Exact>
+        </jsdl:IndividualCPUCount>
+        <Storage>
+            <entry>
+                <partitionName>blankdisk1</partitionName>
+                <jsdl:IndividualDiskSpace>
+                    <jsdl:Exact>${blankspace}</jsdl:Exact>
+                </jsdl:IndividualDiskSpace>
+            </entry>
+        </Storage>
+    </ResourceAllocation>
+    <NodeNumber>1</NodeNumber>
+    <ShutdownMechanism>Trash</ShutdownMechanism>
+
+</WorkspaceDeployment>"
+echo "$NIMBUSDEPLOYMENT" > $DEPLOYMENTFILE
+
+#Boot machine
+$WORKSPACE \
+    -z host \
+    --poll-delay 200 \
+    --file ${EPRFILE} \
+    --deploy-duration $lifetime \
+    --deploy \
+    --request ${DEPLOYMENTFILE} \
+    --metadata ${NIMBUSFILE} \
+    -s https://${cloud}/wsrf/services/WorkspaceFactoryService \
+    --exit-state Running \
+    -o $OPTIONALFILE
+rm -f ${NIMBUSFILE}
+rm -f ${OPTIONALFILE}
+rm -f ${DEPLOYMENTFILE}
+rm -f ${EPRFILE}
+
