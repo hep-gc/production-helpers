@@ -188,7 +188,19 @@ fi
 
 if [ ${httppropagationcred} ]; then
     optional_contents="$optional_contents
-<credentialToCopy>$(cat $userproxy)</credentialToCopy>"
+<credentialToCopy>$(cat $httppropagationcred)</credentialToCopy>"
+else
+	if [[ ${image:0:8} == 'https://' ]]; then
+		default_proxy="/tmp/x509up_u`id -u`"
+		declare -i gp=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
+		if (($gp > 300)); then
+			optional_contents="$optional_contents
+			<credentialToCopy>$(cat $default_proxy)</credentialToCopy>"
+		else
+			echo 'In order to use https propagation, you need to have a valid grid proxy credential (use "cloud-logon" command) or provide one via the "-t" option if it is in a non-standard location.'
+			exit
+		fi
+	fi
 fi
 OPTIONALXML="<OptionalParameters>${optional_contents}</OptionalParameters>"
 echo "$OPTIONALXML" > $OPTIONALFILE
