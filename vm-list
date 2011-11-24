@@ -166,16 +166,14 @@
 		if ($Opt{'kill'}{'value'} eq '?') {
 			print "\nEnter a comma separated list of item numbers to be killed, or 'all' to kill all VMs, or null ('') to exit:\n";
 			$vm_list = readline STDIN;
-			KillList($vm_list);
+			if ($vm_list eq "all\n") {
+				KillAll();
+			} else {
+				KillList($vm_list);
+			}
 
 		} elsif ($Opt{'kill'}{'value'} eq 'all') {
-			for ($i=1; $i<=$vm[0]; $i++) {
-				KillVM($i, 'shutdown');
-				}
-
-			for ($i=1; $i<=$vm[0]; $i++) {
-				KillVM($i, 'kill');
-				}
+			KillAll();
 
 		} elsif ($Opt{'kill'}{'value'} ne '') {
 			KillList($Opt{'kill'}{'value'});
@@ -201,6 +199,16 @@ sub get_option_value {
    return '' if $ix > $#ARGV || substr($ARGV[$ix],0,1) eq '-';
    $i++;
    return $ARGV[$i];
+}
+
+sub KillAll {
+	for ($i=1; $i<=$vm[0]; $i++) {
+		KillVM($i, 'shutdown');
+	}
+
+	for ($i=1; $i<=$vm[0]; $i++) {
+		KillVM($i, 'kill');
+	}
 }
 
 sub KillList {
