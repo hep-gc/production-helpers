@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+	# Set defaults and environment. 
 	$ENV{'PATH'} = '/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin';
 
 	$xml_template = '<WORKSPACE_EPR xsi:type="ns1:EndpointReferenceType" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns1="http://schemas.xmlsoap.org/ws/2004/03/addressing">
@@ -13,6 +14,7 @@
 	$Opt{'kill'}{'value'} = ''; 
 	$Opt{'type'}{'value'} = 'N'; 
 
+	# Read and interpret parameters.
 	for ($i=0; $i<=$#ARGV; $i++) {
 		if ($ARGV[$i] eq '-a' || $ARGV[$i] eq '--all') {
 			$Opt{'cloud'}{'value'} = 'all';
@@ -77,6 +79,7 @@
 			}
 		}
 
+	# Ensure Nimbus cloud client pre-requisites are installed in the correct location. Error and exit if not.
 	$cloud_client = '/opt/nimbus-cloud-client/bin/cloud-client.sh';
 	if (!(-e $cloud_client)) {
 		print "The Nimbus cloud client was not found. It must be installed in the /opt directory.\n";
@@ -84,33 +87,39 @@
 	}
 
 	$workspace_client = '/opt/nimbus-cloud-client/lib/workspace.sh';
-	if (!(-e $cloud_client)) {
+	if (!(-e $workspace_client)) {
 		print "The Nimbus 'workspace.sh' was not found. The Nimbus cloud client must be installed in the /opt directory.\n";
 		exit;
 	}
 
+	# Ensure user has a proxy certificate valid for at least another 5 minutes.
 	$x=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split(\$3, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`;
 	if ($x < 300) {
 		system('cloud-logon');
 		}
 
+	# We need temporary files for Nimbus cloud client parameters. This gives us a unigue handle in the /tmp directory.
 	$tempfile = `mktemp`;
 	chop($tempfile);
 
+	# Retrieve the list of defined (to Cloud Scheduler) clouds.
 	$vm[0] = 0;
 	@clouds = `cloud_status | awk '/\\\./ {print \$1 " " \$3}'`;
 
+	# Retrieve the list of currently running batch VMS.
 	@x = `cloud_status -m | awk '/^[0-9]/ {print \$1}'`;
 	for ($i=0; $i<=$#x; $i++) {
 		chop($x[$i]);
 		}
 	$batch_vms = join(' ', @x);
 
+	# Scan the clouds gathering data.
 	foreach $x (@clouds) {
 		($cloud_id, $cloud_fqn) = split(/[\s\n]+/, $x);
+		# Skip unwanted clouds.
 		next if $Opt{'cloud'}{'value'} ne 'all' && $Opt{'cloud'}{'value'} ne lowercase($cloud_id);
 
-		system("echo '\nvws.factory=$cloud_fqn\n' >$tempfile"); 
+		system("echo 'vws.factory=$cloud_fqn' >$tempfile"); 
 		@x = `$cloud_client \-\-conf $tempfile \-\-status 2\>/dev/null |
 			awk '/Workspace #|Start time|State/ {
 				if (\$3=="Workspace") {id=substr(\$4,2,length(\$4)-2); fqn=\$7;}
@@ -124,6 +133,7 @@
 			$batch_or_interactive = 'N';
 			$batch_or_interactive = 'Y' if index(" $y[0] ", " $batch_vms ") > -1;
 
+			# Skip unwanted VM types.
 			next if $Opt{'type'}{'value'} ne 'all' && $Opt{'type'}{'value'} ne $batch_or_interactive;
 			
 			$vm[0]++;
@@ -141,9 +151,10 @@
 
 	}
 
+	# Display results.
 	if ($vm[0]>0) {
 		if ($Opt{'kill'}{'value'} eq '' || $Opt{'kill'}{'value'} eq '?') {
-			printf ("%4s %-32s %-6s %-12s %-12s %s\n", 'Item', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Start Time');
+			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '  ID', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Start Time');
 			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '----', '--------------------------------', '------', '------------', '------------', '--------------------------------');
 			for ($i=1; $i<=$vm[0]; $i++) {
 				printf ("%4d %-32s %3s    %-12s %-12s %s\n", $i, $vm[$i]{'vm_fqn'}, $vm[$i]{'vm_batch'}, $vm[$i]{'vm_state'}, $vm[$i]{'cloud_id'}, $vm[$i]{'vm_start_date'});
@@ -151,6 +162,7 @@
 			}
 
 
+		# Process "kill" requests.
 		if ($Opt{'kill'}{'value'} eq '?') {
 			print "\nEnter a comma separated list of item numbers to be killed, or 'all' to kill all VMs, or null ('') to exit:\n";
 			$vm_list = readline STDIN;
@@ -179,9 +191,11 @@
 		}
 	}
 
+	# Remove temporary files.
 	system("rm -rf $tempfile\*");
 	exit;
 
+# Subroutines.
 sub get_option_value {
    my $ix = $i + 1;
    return '' if $ix > $#ARGV || substr($ARGV[$ix],0,1) eq '-';
@@ -206,18 +220,22 @@ sub KillVM {
 	my $opt = shift();
 	
 	if ($vm ne '' && $opt ne '') {
-		open(XML, ">$tempfile");
-		printf (XML $xml_template, $vm[$vm]{'cloud_fqn'}, $vm[$vm]{'vm_id'});
-		close(XML);
-
-		if ($opt eq 'shutdown') {
-			system("$workspace_client -e $tempfile --shutdown");
-			$vm[$vm]{'vm_shutdown_time'} = time();
-
+		if ($vm < 1 || $vm > $vm[0]) {
+			print "Unable to kill the VM with ID '$vm'; invalid ID specification.\n" if $opt ne 'shutdown';
 		} else {
-			$shutdown_time = 9 + $vm[$vm]{'vm_shutdown_time'} - time();
-			sleep $shutdown_time if $shutdown > 0;
-			system("$workspace_client -e $tempfile --destroy");
+			open(XML, ">$tempfile");
+			printf (XML $xml_template, $vm[$vm]{'cloud_fqn'}, $vm[$vm]{'vm_id'});
+			close(XML);
+
+			if ($opt eq 'shutdown') {
+				system("$workspace_client -e $tempfile --shutdown");
+				$vm[$vm]{'vm_shutdown_time'} = time();
+
+			} else {
+				$shutdown_time = 9 + $vm[$vm]{'vm_shutdown_time'} - time();
+				sleep $shutdown_time if $shutdown > 0;
+				system("$workspace_client -e $tempfile --destroy");
+			}
 		}
 	}
 
