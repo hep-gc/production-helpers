@@ -131,7 +131,7 @@
 			chop($x[$i]);
 			@y = split(/[\s]+/, $x[$i], 4);
 			$batch_or_interactive = 'N';
-			$batch_or_interactive = 'Y' if index(" $y[0] ", " $batch_vms ") > -1;
+			$batch_or_interactive = 'Y' if index(" $batch_vms ", " $y[0] ") > -1;
 
 			# Skip unwanted VM types.
 			next if $Opt{'type'}{'value'} ne 'all' && $Opt{'type'}{'value'} ne $batch_or_interactive;
