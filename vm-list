@@ -36,12 +36,12 @@
 			print "Synopsis: vm-list -h | --help\n\n";
 			print "          vm-list -a | --all [ -k | --kill [<vm_ids> ] ]\n\n";
 			print "          vm-list [ -c | --cloud <cloud_id> ] [ -t | --type <vm_type> ] [ -k | --kill [<vm_ids> ] ]\n\n";
-			print "Calling 'vm-list' without parameters is equivalent to 'vm-list -c nrc -t interactive. Calling\n";
+			print "Calling 'vm-list' without parameters is equivalent to 'vm-list -c nrc -t interactive'. Calling\n";
 			print "'vm-list' with the '--all' option is equivalent to 'vm-list -c all -t all'. Envoking the command without\n"; 
 			print "the '--kill' option will only produce a display of VMs. Specifying anything other than '?' for the\n";
 			print "'--kill' option will kill VMs but not produce the listing.\n\n";
 			print "The vm-kill is an alias for and accepts the same parameters as the 'vm-list' command. By default,\n";
-			print "calling 'vm-kill' with no paramateres is equivalent to 'vm-list -k ?'.\n\n";
+			print "calling 'vm-kill' with no paramateres is equivalent to 'vm-list -k \"?\"'.\n\n";
 			print "Additional help for a specific option, can be displayed by specifying the option but no value, eg.\n";
 			print "'vm-kill -c' will display additional help for the '--cloud' option.\n\n";
 			exit;
