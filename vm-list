@@ -119,6 +119,12 @@
 		# Skip unwanted clouds.
 		next if $Opt{'cloud'}{'value'} ne 'all' && $Opt{'cloud'}{'value'} ne lowercase($cloud_id);
 
+		@x = `nmap -p T:8443 $cloud_fqn 2>/dev/null| awk '/(1 host up)/'`;
+		if ($#x < 0) {
+			print "The $cloud_id cloud is currently unavailable\n";
+			next;
+		}
+
 		system("echo 'vws.factory=$cloud_fqn' >$tempfile"); 
 		@x = `$cloud_client \-\-conf $tempfile \-\-status 2\>/dev/null |
 			awk '/Workspace #|Start time|State/ {
