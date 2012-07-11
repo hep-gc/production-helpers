@@ -163,9 +163,9 @@ fi
 
 if [ 'X'${_image_info_cols[8]} == 'Xkvm,xen' ] || [ 'X'${_image_info_cols[8]} == 'Xxen,kvm' ]; then
 	if [ 'X'${_cloud_info_cols[3]} == 'Xkvm' ]; then
-		_image=$_image'/kvm'
+		_image=$_image'?hypervisor=kvm'
 	else
-		_image=$_image'/xen'
+		_image=$_image'?hypervisor=xen'
 	fi
 fi
 
