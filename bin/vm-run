@@ -1,0 +1,350 @@
+#!/bin/bash
+# vm-run-simple - create a VM from the command line
+
+# By default, we assume this will be installed in the cloud-client
+# bin directory. If it isn't you'll want to point to your cloud-client
+# install here.
+#CLOUD_CLIENT_PATH=$(cd `dirname $0`/../ && echo `pwd -P`)
+CLOUD_CLIENT_PATH=/opt/nimbus-cloud-client
+WORKSPACE=$CLOUD_CLIENT_PATH/lib/workspace.sh
+
+#RETRIEVE CONFIGURABLE DEFAULTS
+. /usr/local/etc/vm-run.conf
+if [ -e ~/.cloud_helpers/vm-run.conf ]; then
+	. ~/.cloud_helpers/vm-run.conf
+fi
+
+# SCRIPT BEGINS:
+SCRIPT=`basename $0`
+DATESTAMP=`date +%s`
+NIMBUSFILE=/tmp/nimbus.${DATESTAMP}.xml
+DEPLOYMENTFILE=/tmp/nimbus.deployment.${DATESTAMP}.xml
+OPTIONALFILE=/tmp/nimbus.optional.${DATESTAMP}.xml
+EPRFILE=/tmp/nimbus.${DATESTAMP}.epr
+
+USAGE="Usage:
+`basename $0` [options]
+
+Options:
+[-a|--arch ccc]          - x86 or x86_64, default: x86
+[-z|--authkeys ccc]      - eg. ~/root/authorized_keys
+[-b|--blankspace nnn]    - MB, default: 102400
+[-d|--bootdevice ddd]    - eg. sda, default determined by chosen cloud
+[-c|--cloud ccc]         - eg. nrc, use vm-run --list to list valid cloud names
+[-C|--configure]         - Edit user configuration (~/.cloud_helpers/vm-run.conf)
+[-p|--cpus nnn]          - default: 1
+[-h|--help]
+[-t|--httpsproxy ccc]    - eg. /tmp/x509up_u`id -u`
+[-i|--image ccc]         - eg. http://host/imagename.img.gz (see also -R)
+[-w|--lifetime nnn]      - minutes, default: 2880
+[-L|--list]
+[-n|--network ccc]       - default: interactive
+[-r|--ram nnn]           - MB, default: 1024
+[-R|--repomanimage]      - eg. crlb/testimage (use either -i or -R but not both)
+[-s|--sshpub ccc]        - eg. ~/.ssh/id_rsa.pub
+[-l|--sshuser ccc]       - default: root
+[-u|--userproxy ccc]     - eg. /tmp/x509up_u`id -u`"
+
+if [ ! -e $WORKSPACE ]; then
+	echo 'Nimbus cloud client must be installed in /opt.'
+	exit
+fi
+
+# Parse command line arguments
+while [ "$1" != "" ]; do
+    case $1 in
+		-R | --repomanimage )   shift
+								_repomanimage=$1
+								_image_info=`repoman li $_repomanimage | awk '/file_url|hypervisor/'`
+								_image_info_cols=( $_image_info )
+								if [ 'X'${_image_info_cols[0]} == 'X' ]; then
+									echo "Error: Specified repoman image '$1' does not exist. Use 'repoman li' to list valid images."
+									exit
+								fi
+								if [ ${_image_info_cols[5]} == 'None' ]; then
+									_image=${_image_info_cols[2]}
+								else
+									_image=${_image_info_cols[5]}
+								fi
+								;;
+		-C | --configure )      if [ ! -e ~/.cloud_helpers/vm-run.conf ]; then
+									mkdir -p ~/.cloud_helpers
+									cp /usr/local/etc/vm-run.conf ~/.cloud_helpers/
+								fi
+		                        vi ~/.cloud_helpers/vm-run.conf
+                                exit 0
+                                ;;
+		-L | --list )           cloud_status
+                                exit 0
+                                ;;
+        -i | --image )          shift
+                                _image=$1
+                                ;;
+        -d | --bootdevice ) shift
+                                _bootdevice=$1
+                                ;;
+        -s | --sshpub )         shift
+                                _sshpub=$1
+                                ;;
+        -l | --sshuser )        shift
+                                _sshuser=$1
+                                ;;
+        -z | --authkeys )       shift
+                                _authkeys=$1
+                                ;;
+        -u | --userproxy )      shift
+                                _userproxy=$1
+                                ;;
+        -t | --http-prop-cred ) shift
+                                _httpsproxy=$1
+                                ;;
+        -n | --network )        shift
+                                _network=$1
+                                ;;
+        -r | --ram )            shift
+                                _ram=$1
+                                ;;
+        -p | --cpus )           shift
+                                _cpus=$1
+                                ;;
+        -b | --blankspace )     shift
+                                _blankspace=$1
+                                ;;
+        -a | --arch )            shift
+                                _arch=$1
+                                ;;
+        -c | --cloud )          shift
+                                _cloud=$1
+                                ;;
+        -w | --lifetime )       shift
+                                _lifetime=$1
+                                ;;
+        -h | --help )           echo "$USAGE"
+                                exit
+                                ;;
+        * )                     echo "$USAGE"
+                                exit 1
+    esac
+    shift
+done
+
+# Set defaults
+[ "$_arch" ] || _arch=$ARCH
+[ "$_authkeys" ] || authkeys=$AUTHORIZED_KEYS_ON_VM
+[ "$_blankspace" ] || _blankspace=$BLANKSPACE
+[ "$_bootdevice" ] || _bootdevice=$bootdevice
+[ "$_cloud" ] || _cloud=$CLOUD
+[ "$_cpus" ] || _cpus=$CPUS
+[ "$_httpsproxy" ] || _httpsproxy=$HTTPSPROXY
+[ "$_image" ] || _image=$IMAGE
+[ "$_lifetime" ] || _lifetime=$LIFETIME
+[ "$_network" ] || _network=$NETWORK
+[ "$_ram" ] || _ram=$RAM
+[ "$_sshpub" ] || _sshpub=$SSHPUB
+[ "$_sshuser" ] || _sshuser=$SSHUSER
+[ "$_userproxy" ] || _userproxy=$USERPROXY
+
+if [ 'X'$_cloud == 'X' ] || [ 'X'$_image == 'X' ]; then
+	echo "Error: No cloud or image was specified either via command options or via the user configuration"
+	echo "       file (~/.cloud_helpers/vm-run.conf) or via the system wide configuration file"
+	echo "       (/usr/local/etc/.cloud_helpers/vm-run.conf)."
+	echo ""
+	echo "$USAGE"
+	exit
+fi
+
+_cloud_info=`cloud_status | awk '!/Resources:|CLOUD TYPE/' | awk "BEGIN {IGNORECASE=1} /^$_cloud /"`
+_cloud_info_cols=( $_cloud_info )
+
+if [ 'X'${_cloud_info_cols[0]} == 'X' ]; then
+	echo "Error: The specified cloud '$_cloud' does not exist. Use 'vm-run --list' to list valid clouds."
+	exit
+fi
+
+if [ 'X'${_image_info_cols[8]} == 'Xkvm,xen' ] || [ 'X'${_image_info_cols[8]} == 'Xxen,kvm' ]; then
+	if [ 'X'${_cloud_info_cols[3]} == 'Xkvm' ]; then
+		_image=$_image'/kvm'
+	else
+		_image=$_image'/xen'
+	fi
+fi
+
+if [ 'X'$_bootdevice == 'X' ]; then
+	if [ 'X'${_cloud_info_cols[3]} == 'Xkvm' ]; then
+		_bootdevice='hda'
+	else
+		_bootdevice='sda'
+	fi
+fi
+
+if [ $_bootdevice == 'sda' ]; then
+    _blankdevice='sdb'
+elif [ $_bootdevice == 'sda1' ]; then
+    _blankdevice='sda2'
+elif [ $_bootdevice == 'hda' ]; then
+    _blankdevice='hdb'
+else
+    echo "I don't know about boot device '$_bootdevice'. Guessing 'sdb' for the blank space device." >&2
+    _blankdevice='sdb'
+fi
+
+optional_contents=""
+# Build Optional File
+if [ "${_authkeys}" ] ; then
+    SSHPATH="$_authkeys"
+elif [ "${_sshuser}" = "root" ] ; then
+    SSHPATH="/root/.ssh/authorized_keys"
+else
+    SSHPATH="/home/${_sshuser}/.ssh/authorized_keys"
+fi
+
+if [ ${_sshpub} ]; then
+    optional_contents="$optional_contents
+<filewrite>
+  <content>$(cat $_sshpub)</content>
+  <pathOnVM>${SSHPATH}</pathOnVM>
+</filewrite>"
+fi
+
+if [ ${_userproxy} ]; then
+    optional_contents="$optional_contents
+<filewrite>
+  <content>$(cat $_userproxy)</content>
+  <pathOnVM>/tmp/x509up_u0</pathOnVM>
+</filewrite>"
+fi
+
+if [ ${_httpsproxy} ]; then
+    optional_contents="$optional_contents
+<credentialToCopy>$(cat $_httpsproxy)</credentialToCopy>"
+else
+	if [[ ${_image:0:8} == 'https://' ]]; then
+		default_proxy="/tmp/x509up_u`id -u`"
+		declare -i gp=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
+		if (($gp > 300)); then
+			optional_contents="$optional_contents
+			<credentialToCopy>$(cat $default_proxy)</credentialToCopy>"
+		else
+			echo 'In order to use https propagation, you need to have a valid grid proxy credential (use "cloud-logon" command) or provide one via the "-t" option if it is in a non-standard location.'
+			exit
+		fi
+	fi
+fi
+OPTIONALXML="<OptionalParameters>${optional_contents}</OptionalParameters>"
+echo "$OPTIONALXML" > $OPTIONALFILE
+
+# Write XML File
+NIMBUSXML="<?xml version='1.0' encoding='UTF-8'?>
+<VirtualWorkspace
+    xmlns='http://www.globus.org/2008/06/workspace/metadata'
+    xmlns:def='http://www.globus.org/2008/06/workspace/metadata/definition'
+    xmlns:log='http://www.globus.org/2008/06/workspace/metadata/logistics'
+    xmlns:jsdl='http://schemas.ggf.org/jsdl/2005/11/jsdl'
+    xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' >
+
+    <!-- name is an arbitrary URI -->
+    <name>http://${_cloud}/`basename ${_image}`</name>
+
+    <log:logistics>
+        <log:networking>
+            <log:nic>
+                <log:name>eth0</log:name>
+                <log:ipConfig>
+                    <log:acquisitionMethod>AllocateAndConfigure</log:acquisitionMethod>
+                </log:ipConfig>
+
+                <!--
+                The association string allows you to associate the NIC with
+                specific networking contexts (a common example is a string
+                which resolves to which network to bridge the virtual NIC
+                to; a simple scheme would be 'public' vs. 'private'.
+                Another example is VPN).  A site will advertise the
+                available assocations in the workspace factory resource
+                properties (to query with the sample client, use the
+                factoryrp option).
+                -->
+                <log:association>${_network}</log:association>
+            </log:nic>
+        </log:networking>
+    </log:logistics>
+
+    <def:definition>
+        <def:requirements>
+            <jsdl:CPUArchitecture>
+                <jsdl:CPUArchitectureName>${_arch}</jsdl:CPUArchitectureName>
+            </jsdl:CPUArchitecture>
+            <def:VMM>
+                <def:type>Xen</def:type>
+                <def:version>3</def:version>
+            </def:VMM>
+        </def:requirements>
+        <def:diskCollection>
+            <def:rootVBD>
+                <!--
+                Relative path names like in this example will be resolved
+                relative to the deployment node's local image repository
+                -->
+                <def:location>${_image}</def:location>
+                <def:mountAs>${_bootdevice}</def:mountAs>
+                <def:permissions>ReadWrite</def:permissions>
+            </def:rootVBD>
+            <def:blankspacePartition>
+                <def:partitionName>blankdisk1</def:partitionName>
+                <def:mountAs>${_blankdevice}</def:mountAs>
+            </def:blankspacePartition>
+        </def:diskCollection>
+    </def:definition>
+</VirtualWorkspace>"
+echo "$NIMBUSXML" > $NIMBUSFILE
+
+NIMBUSDEPLOYMENT="<?xml version='1.0' encoding='UTF-8'?>
+<WorkspaceDeployment
+    xmlns='http://www.globus.org/2008/06/workspace/negotiable'
+    xmlns:jsdl='http://schemas.ggf.org/jsdl/2005/11/jsdl'
+    xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' >
+
+    <DeploymentTime>
+        <!-- xsd:duration syntax. This example == 30 minutes -->
+        <minDuration>PT8H</minDuration>
+    </DeploymentTime>
+    <InitialState>Running</InitialState>
+    <ShutdownMechanism>Trash</ShutdownMechanism>
+    <ResourceAllocation>
+        <jsdl:IndividualPhysicalMemory>
+            <jsdl:Exact>${_ram}</jsdl:Exact>
+        </jsdl:IndividualPhysicalMemory>
+        <jsdl:IndividualCPUCount>
+            <jsdl:Exact>${_cpus}</jsdl:Exact>
+        </jsdl:IndividualCPUCount>
+        <Storage>
+            <entry>
+                <partitionName>blankdisk1</partitionName>
+                <jsdl:IndividualDiskSpace>
+                    <jsdl:Exact>${_blankspace}</jsdl:Exact>
+                </jsdl:IndividualDiskSpace>
+            </entry>
+        </Storage>
+    </ResourceAllocation>
+    <NodeNumber>1</NodeNumber>
+    <ShutdownMechanism>Trash</ShutdownMechanism>
+
+</WorkspaceDeployment>"
+echo "$NIMBUSDEPLOYMENT" > $DEPLOYMENTFILE
+
+#Boot machine
+$WORKSPACE \
+    -z host \
+    --poll-delay 200 \
+    --file ${EPRFILE} \
+    --deploy-duration $_lifetime \
+    --deploy \
+    --request ${DEPLOYMENTFILE} \
+    --metadata ${NIMBUSFILE} \
+    -s https://${_cloud_info_cols[2]}/wsrf/services/WorkspaceFactoryService \
+    --exit-state Running \
+    -o $OPTIONALFILE
+rm -f ${NIMBUSFILE}
+rm -f ${OPTIONALFILE}
+rm -f ${DEPLOYMENTFILE}
+rm -f ${EPRFILE}
+
