@@ -55,7 +55,7 @@ while [ "$1" != "" ]; do
     case $1 in
 		-R | --repomanimage )   shift
 								_repomanimage=$1
-								_image_info=`repoman li $_repomanimage | awk '/file_url/'`
+								_image_info=`repoman li $_repomanimage | awk '/file_url|hypervisor/'`
 								_image_info_cols=( $_image_info )
 								if [ 'X'${_image_info_cols[0]} == 'X' ]; then
 									echo "Error: Specified repoman image '$1' does not exist. Use 'repoman li' to list valid images."
@@ -161,19 +161,12 @@ if [ 'X'${_cloud_info_cols[0]} == 'X' ]; then
 	exit
 fi
 
-if [[ $_image =~ '__hypervisor__' ]]; then
-	save_image=$_image
-
-	save_IFS=$IFS
-	IFS='/'
-	ImageWords=( $save_image )
-	IFS=$save_IFS
-
-	_image=${ImageWords[0]}
-	for (( ix=1; ix<${#ImageWords[@]}-2;  ix++ )); do
-		_image+='/'${ImageWords[$ix]}
-	done
-	_image+='/'${_cloud_info_cols[3]}'/'${ImageWords[${#ImageWords[@]}-1]}
+if [ 'X'${_image_info_cols[8]} == 'Xkvm,xen' ] || [ 'X'${_image_info_cols[8]} == 'Xxen,kvm' ]; then
+	if [ 'X'${_cloud_info_cols[3]} == 'Xkvm' ]; then
+		_image=$_image'?hypervisor=kvm'
+	else
+		_image=$_image'?hypervisor=xen'
+	fi
 fi
 
 if [ 'X'$_bootdevice == 'X' ]; then
