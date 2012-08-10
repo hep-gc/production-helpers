@@ -119,8 +119,8 @@
 		# Skip unwanted clouds.
 		next if $Opt{'cloud'}{'value'} ne 'all' && $Opt{'cloud'}{'value'} ne lowercase($cloud_id);
 
-		@x = `nmap -p T:8443 $cloud_fqn 2>/dev/null| awk '/(1 host up)/'`;
-		if ($#x < 0) {
+		@x = `nmap -PN -p T:8443 $cloud_fqn | awk '/8443\\/tcp/ \{print \$2\}'`;
+		if ($x[0] ne "open\n") {
 			print "The $cloud_id cloud is currently unavailable\n";
 			next;
 		}

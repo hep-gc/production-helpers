@@ -4,4 +4,3 @@
 	export X509_CERT_DIR=/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase/etc/grid-security/certificates
 	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase/x86_64/gLite/3.2.8-0.sl5/globus/lib
 	export MYPROXY_SERVER=myproxy.cloud.nrc.ca
-    export GT_PROXY_MODE="rfc"
