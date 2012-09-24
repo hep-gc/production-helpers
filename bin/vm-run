@@ -50,6 +50,12 @@ if [ ! -e $WORKSPACE ]; then
 	exit
 fi
 
+# Issue warning if using save (static) cloud status.
+if [ -e ~/.cloud_helpers/cloud_status ]; then
+    echo "Warning: Using saved ~/.cloud_helpers/cloud_status."
+fi
+
+
 # Parse command line arguments
 while [ "$1" != "" ]; do
     case $1 in
@@ -74,7 +80,11 @@ while [ "$1" != "" ]; do
 		                        vi ~/.cloud_helpers/vm-run.conf
                                 exit 0
                                 ;;
-		-L | --list )           cloud_status
+		-L | --list )           if [  -e ~/.cloud_helpers/cloud_status ]; then
+                                    cat ~/.cloud_helpers/cloud_status
+                                else
+                                    cloud_status
+                                fi
                                 exit 0
                                 ;;
         -i | --image )          shift
@@ -147,15 +157,19 @@ done
 if [ 'X'$_cloud == 'X' ] || [ 'X'$_image == 'X' ]; then
 	echo "Error: No cloud or image was specified either via command options or via the user configuration"
 	echo "       file (~/.cloud_helpers/vm-run.conf) or via the system wide configuration file"
-	echo "       (/usr/local/etc/.cloud_helpers/vm-run.conf)."
+	echo "       (/usr/local/etc/vm-run.conf)."
 	echo ""
 	echo "$USAGE"
 	exit
 fi
 
-_cloud_info=`cloud_status | awk '!/Resources:|CLOUD TYPE/' | awk "BEGIN {IGNORECASE=1} /^$_cloud /"`
-_cloud_info_cols=( $_cloud_info )
+if [  -e ~/.cloud_helpers/cloud_status ]; then
+    _cloud_info=`awk '!/Resources:|CLOUD TYPE/' ~/.cloud_helpers/cloud_status| awk "BEGIN {IGNORECASE=1} /^$_cloud /"`
+else
+    _cloud_info=`cloud_status | awk '!/Resources:|CLOUD TYPE/' | awk "BEGIN {IGNORECASE=1} /^$_cloud /"`
+fi
 
+_cloud_info_cols=( $_cloud_info )
 if [ 'X'${_cloud_info_cols[0]} == 'X' ]; then
 	echo "Error: The specified cloud '$_cloud' does not exist. Use 'vm-run --list' to list valid clouds."
 	exit
