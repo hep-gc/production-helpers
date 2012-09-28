@@ -27,23 +27,24 @@ USAGE="Usage:
 
 Options:
 [-a|--arch ccc]          - x86 or x86_64, default: x86
-[-z|--authkeys ccc]      - eg. ~/root/authorized_keys
 [-b|--blankspace nnn]    - MB, default: 102400
-[-d|--bootdevice ddd]    - eg. sda, default determined by chosen cloud
-[-c|--cloud ccc]         - eg. nrc, use vm-run --list to list valid cloud names
 [-C|--configure]         - Edit user configuration (~/.cloud_helpers/vm-run.conf)
-[-p|--cpus nnn]          - default: 1
+[-c|--cloud ccc]         - eg. nrc, use vm-run --list to list valid cloud names
+[-d|--bootdevice ddd]    - eg. sda, default determined by chosen cloud
 [-h|--help]
-[-t|--httpsproxy ccc]    - eg. /tmp/x509up_u`id -u`
 [-i|--image ccc]         - eg. http://host/imagename.img.gz (see also -R)
-[-w|--lifetime nnn]      - minutes, default: 2880
 [-L|--list]
-[-n|--network ccc]       - default: interactive
-[-r|--ram nnn]           - MB, default: 1024
-[-R|--repomanimage]      - eg. crlb/testimage (use either -i or -R but not both)
-[-s|--sshpub ccc]        - eg. ~/.ssh/id_rsa.pub
 [-l|--sshuser ccc]       - default: root
-[-u|--userproxy ccc]     - eg. /tmp/x509up_u`id -u`"
+[-n|--network ccc]       - default: interactive
+[-p|--cpus nnn]          - default: 1
+[-R|--repomanimage]      - eg. crlb/testimage (use either -i or -R but not both)
+[-r|--ram nnn]           - MB, default: 1024
+[-s|--sshpub ccc]        - eg. ~/.ssh/id_rsa.pub
+[-t|--httpsproxy ccc]    - eg. /tmp/x509up_u`id -u`
+[-u|--userproxy ccc]     - eg. /tmp/x509up_u`id -u`
+[-v|--verbose]           - toggle the verbosity flag.
+[-w|--lifetime nnn]      - minutes.
+[-z|--authkeys ccc]      - eg. ~/root/authorized_keys"
 
 if [ ! -e $WORKSPACE ]; then
 	echo 'Nimbus cloud client must be installed in /opt.'
@@ -77,7 +78,7 @@ while [ "$1" != "" ]; do
 									mkdir -p ~/.cloud_helpers
 									cp /usr/local/etc/vm-run.conf ~/.cloud_helpers/
 								fi
-		                        vi ~/.cloud_helpers/vm-run.conf
+		                        nano ~/.cloud_helpers/vm-run.conf
                                 exit 0
                                 ;;
 		-L | --list )           if [  -e ~/.cloud_helpers/cloud_status ]; then
@@ -129,6 +130,12 @@ while [ "$1" != "" ]; do
         -w | --lifetime )       shift
                                 _lifetime=$1
                                 ;;
+        -v | --verbose )        if (( $VERBOSE > 0 )); then
+                                    _verbose=0
+                                else
+                                    _verbose=1
+                                fi
+                                ;;
         -h | --help )           echo "$USAGE"
                                 exit
                                 ;;
@@ -153,6 +160,7 @@ done
 [ "$_sshpub" ] || _sshpub=$SSHPUB
 [ "$_sshuser" ] || _sshuser=$SSHUSER
 [ "$_userproxy" ] || _userproxy=$USERPROXY
+[ "$_verbose" ] || _verbose=$VERBOSE
 
 if [ 'X'$_cloud == 'X' ] || [ 'X'$_image == 'X' ]; then
 	echo "Error: No cloud or image was specified either via command options or via the user configuration"
@@ -352,18 +360,44 @@ NIMBUSDEPLOYMENT="<?xml version='1.0' encoding='UTF-8'?>
 </WorkspaceDeployment>"
 echo "$NIMBUSDEPLOYMENT" > $DEPLOYMENTFILE
 
+echo 'Attempting to boot '$_image', automatic termination in '$_lifetime' minutes, CPUs='$_cpus', RAM='$_ram'MB, blank space='$_blankspace'MB. This may take a few minutes...'
+
 #Boot machine
-$WORKSPACE \
-    -z host \
-    --poll-delay 200 \
-    --file ${EPRFILE} \
-    --deploy-duration $_lifetime \
-    --deploy \
-    --request ${DEPLOYMENTFILE} \
-    --metadata ${NIMBUSFILE} \
-    -s https://${_cloud_info_cols[2]}/wsrf/services/WorkspaceFactoryService \
-    --exit-state Running \
-    -o $OPTIONALFILE
+if (( $_verbose > 0 )); then 
+    $WORKSPACE \
+        -z host \
+        --poll-delay 200 \
+        --file ${EPRFILE} \
+        --deploy-duration $_lifetime \
+        --deploy \
+        --request ${DEPLOYMENTFILE} \
+        --metadata ${NIMBUSFILE} \
+        -s https://${_cloud_info_cols[2]}/wsrf/services/WorkspaceFactoryService \
+        --exit-state Running \
+        -o $OPTIONALFILE 
+else
+    $WORKSPACE \
+        -z host \
+        --poll-delay 200 \
+        --file ${EPRFILE} \
+        --deploy-duration $_lifetime \
+        --deploy \
+        --request ${DEPLOYMENTFILE} \
+        --metadata ${NIMBUSFILE} \
+        -s https://${_cloud_info_cols[2]}/wsrf/services/WorkspaceFactoryService \
+        --exit-state Running \
+        -o $OPTIONALFILE \
+        2>/tmp/vm-run-$$.log \
+        | awk 'NF>0 {if($3=="id"){printf "Virtual Machine ID=%s, ", $4} else if($1=="IP"){printf "IP address=%s, ", $3} else if($1=="Hostname:") {printf "hostname=%s, ", $2} else if($3=="change:"){printf "%s", "."} else if($2=="reached"){print "Running."}}'
+
+    any_errors=$(stat -c%s /tmp/vm-run-$$.log)
+    if (( $any_errors > 0 )); then
+        echo ''
+        echo 'Error: Command failed. See /tmp/vm-run-'$$'.log for details.'
+    fi
+fi
+
+# Remove temporary files.
 rm -f ${NIMBUSFILE}
 rm -f ${OPTIONALFILE}
 rm -f ${DEPLOYMENTFILE}
