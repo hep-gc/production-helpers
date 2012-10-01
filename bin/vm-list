@@ -140,10 +140,10 @@
 
 		system("echo 'vws.factory=$cloud_fqn' >$tempfile"); 
 		@x = `$cloud_client \-\-conf $tempfile \-\-status 2\>/dev/null |
-			awk '/Workspace #|Start time|State/ {
+			awk '/Workspace #|Shutdown time|State/ {
 				if (\$3=="Workspace") {id=substr(\$4,2,length(\$4)-2); fqn=\$7;}
 				if (\$1=="State:") {state=\$2;}
-				if (\$1=="Start") {print id " " fqn " " state " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8}
+				if (\$1=="Shutdown") {print id " " fqn " " state " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8}
 				}'`;
 
 		for ($i=0; $i<=$#x; $i++) {
@@ -174,7 +174,7 @@
 	# Display results.
 	if ($vm[0]>0) {
 		if ($Opt{'kill'}{'value'} eq '' || $Opt{'kill'}{'value'} eq '?') {
-			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '  ID', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Start Time');
+			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '  ID', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Shutdown Time');
 			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '----', '--------------------------------', '------', '------------', '------------', '--------------------------------');
 			for ($i=1; $i<=$vm[0]; $i++) {
 				printf ("%4d %-32s %3s    %-12s %-12s %s\n", $i, $vm[$i]{'vm_fqn'}, $vm[$i]{'vm_batch'}, $vm[$i]{'vm_state'}, $vm[$i]{'cloud_id'}, $vm[$i]{'vm_start_date'});
