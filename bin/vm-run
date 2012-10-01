@@ -360,7 +360,7 @@ NIMBUSDEPLOYMENT="<?xml version='1.0' encoding='UTF-8'?>
 </WorkspaceDeployment>"
 echo "$NIMBUSDEPLOYMENT" > $DEPLOYMENTFILE
 
-echo 'Attempting to boot '$_image', automatic termination in '$_lifetime' minutes, CPUs='$_cpus', RAM='$_ram'MB, blank space='$_blankspace'MB. This may take a few minutes...'
+echo 'Attempting to boot '$_image', CPUs='$_cpus', RAM='$_ram'MB, blank space='$_blankspace'MB. This may take a few minutes...'
 
 #Boot machine
 if (( $_verbose > 0 )); then 
@@ -388,7 +388,16 @@ else
         --exit-state Running \
         -o $OPTIONALFILE \
         2>/tmp/vm-run-$$.log \
-        | awk 'NF>0 {if($3=="id"){printf "Virtual Machine ID=%s, ", $4} else if($1=="IP"){printf "IP address=%s, ", $3} else if($1=="Hostname:") {printf "hostname=%s, ", $2} else if($3=="change:"){printf "%s", "."} else if($2=="reached"){print "Running."}}'
+        | awk 'NF>0 \
+           {if($3=="id"){print "   Virtual Machine ID=" $4} \
+           else if($1=="IP"){print "   IP address=" $3} \
+           else if($1=="Hostname:") {print "   Hostname=" $2} \
+           else if($1=="Shutdown"){shutdown=$3 " " $4 " " $5 " " $6 " " $7 " " $8} \
+           else if($6=="Unpropagated"){print "   Retrieving image from repository."} \
+           else if($6=="Propagated"){print "   Unzipping and contextualizing the image."} \
+           else if($6=="Running"){print "   The VM is running and the image is booting."} \
+           else if($2=="reached"){print "   Automatic shutdown is scheduled for "  shutdown "."} \
+           }'
 
     any_errors=$(stat -c%s /tmp/vm-run-$$.log)
     if (( $any_errors > 0 )); then
