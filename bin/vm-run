@@ -40,8 +40,8 @@ Options:
 [-R|--repomanimage]      - eg. crlb/testimage (use either -i or -R but not both)
 [-r|--ram nnn]           - MB, default: 1024
 [-s|--sshpub ccc]        - eg. ~/.ssh/id_rsa.pub
-[-t|--httpsproxy ccc]    - eg. /tmp/x509up_u`id -u`
-[-u|--userproxy ccc]     - eg. /tmp/x509up_u`id -u`
+[-t|--httpsproxy ccc]    - eg. /tmp/x509up_u1000
+[-u|--userproxy ccc]     - eg. /tmp/x509up_u1000
 [-v|--verbose]           - toggle the verbosity flag.
 [-w|--lifetime nnn]      - minutes.
 [-z|--authkeys ccc]      - eg. ~/root/authorized_keys"
