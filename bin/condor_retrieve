@@ -1,0 +1,32 @@
+#!/bin/bash
+    if [ 'X'$1 == 'X' ]; then
+        echo 'Usage:  condor_retrieve <job ID>'
+        echo
+        echo 'Display the target directory and perform condor_transfer_data for the specified job.'
+        exit
+    fi
+
+    x=`condor_q $1 | awk "/$1/ {print \\$6}"`
+
+    if [ 'X'$x == 'X' ]; then
+        echo 'Job' $1 'not found.'
+        exit
+    fi
+
+    if [ $x == 'I' ]; then
+        echo 'Job' $1 'waiting to run.'
+        exit
+    fi
+
+    if [ $x == 'R' ]; then
+        echo 'Job' $1 'still running.'
+        exit
+    fi
+
+    if [ $x != 'C' ]; then
+        echo 'Job' $1 'not completed.'
+        exit
+    fi
+
+    condor_q -l $1 | awk "/SUBMIT_Iwd/ {print \"Transferring files for job \" $1 \" to: \" \$3}"
+    condor_transfer_data $1 >/dev/null

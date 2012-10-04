@@ -14,6 +14,11 @@
 	$Opt{'kill'}{'value'} = ''; 
 	$Opt{'type'}{'value'} = 'N'; 
 
+    # Issue warning if using save (static) cloud status.
+    if (-e "$ENV{'HOME'}/.cloud_helpers/cloud_status") {
+        print "Warning: Using saved ~/.cloud_helpers/cloud_status.\n";
+    }
+
 	# Read and interpret parameters.
 	for ($i=0; $i<=$#ARGV; $i++) {
 		if ($ARGV[$i] eq '-a' || $ARGV[$i] eq '--all') {
@@ -25,7 +30,11 @@
 			$Opt{'cloud'}{'value'} = lowercase(get_option_value());
 			if ($Opt{'cloud'}{'value'} eq '') {
 				print "vm-list: The value for the '--cloud' option was omitted. One of the following may be specified:\n\n";
-				system("cloud_status | awk '!/Resources:|NETWORK/ {print \"   \" \$1}'");
+                if (-e "$ENV{'HOME'}/.cloud_helpers/cloud_status") {
+                    system("awk '!/Resources:|NETWORK/ {print \"   \" \$1}' ~/.cloud_helpers/cloud_status");
+                } else {
+                    system("cloud_status | awk '!/Resources:|NETWORK|8111/ {print \"   \" \$1}'");
+                }
 				print "or 'all' to query all configured clouds.\n\n";
 				exit;
 				}
@@ -104,7 +113,11 @@
 
 	# Retrieve the list of defined (to Cloud Scheduler) clouds.
 	$vm[0] = 0;
-	@clouds = `cloud_status | awk '/\\\./ {print \$1 " " \$3}'`;
+    if (-e "$ENV{'HOME'}/.cloud_helpers/cloud_status") {
+        @clouds = `awk '/\\\./ {print \$1 " " \$3}' ~/.cloud_helpers/cloud_status`;
+    } else {
+        @clouds = `cloud_status | awk '/\\\./ {print \$1 " " \$3}'`;
+    }
 
 	# Retrieve the list of currently running batch VMS.
 	@x = `cloud_status -m | awk '/^[0-9]/ {print \$1}'`;
@@ -127,10 +140,10 @@
 
 		system("echo 'vws.factory=$cloud_fqn' >$tempfile"); 
 		@x = `$cloud_client \-\-conf $tempfile \-\-status 2\>/dev/null |
-			awk '/Workspace #|Start time|State/ {
+			awk '/Workspace #|Shutdown time|State/ {
 				if (\$3=="Workspace") {id=substr(\$4,2,length(\$4)-2); fqn=\$7;}
 				if (\$1=="State:") {state=\$2;}
-				if (\$1=="Start") {print id " " fqn " " state " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8}
+				if (\$1=="Shutdown") {print id " " fqn " " state " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8}
 				}'`;
 
 		for ($i=0; $i<=$#x; $i++) {
@@ -141,6 +154,7 @@
 
 			# Skip unwanted VM types.
 			next if $Opt{'type'}{'value'} ne 'all' && $Opt{'type'}{'value'} ne $batch_or_interactive;
+			$batch_or_interactive = '?' if -e "$ENV{'HOME'}/.cloud_helpers/cloud_status" && length($batch_vms) < 1;
 			
 			$vm[0]++;
 			$j = $vm[0];
@@ -160,7 +174,7 @@
 	# Display results.
 	if ($vm[0]>0) {
 		if ($Opt{'kill'}{'value'} eq '' || $Opt{'kill'}{'value'} eq '?') {
-			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '  ID', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Start Time');
+			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '  ID', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Shutdown Time');
 			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '----', '--------------------------------', '------', '------------', '------------', '--------------------------------');
 			for ($i=1; $i<=$vm[0]; $i++) {
 				printf ("%4d %-32s %3s    %-12s %-12s %s\n", $i, $vm[$i]{'vm_fqn'}, $vm[$i]{'vm_batch'}, $vm[$i]{'vm_state'}, $vm[$i]{'cloud_id'}, $vm[$i]{'vm_start_date'});
