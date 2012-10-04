@@ -1,0 +1,30 @@
+#!/bin/bash
+	if [ 'X'$1 == 'Xfalse' ]; then
+		if [ -e '/boot/grub/grub.conf-kvm' ] && [ -e '/boot/grub/grub.conf-xen' ]; then
+			mv /boot/grub/grub.conf-kvm /boot/grub/grub.conf-kvm-disable
+			mv /boot/grub/grub.conf-xen /boot/grub/grub.conf-xen-disable
+		else
+			echo 'The image is not setup for dual hypervisor support.'
+		fi
+	elif [ 'X'$1 == 'Xtrue' ]; then
+		if [ -e '/boot/grub/grub.conf-kvm-disable' ] && [ -e '/boot/grub/grub.conf-xen-disable' ]; then
+			mv /boot/grub/grub.conf-kvm-disable /boot/grub/grub.conf-kvm
+			mv /boot/grub/grub.conf-xen-disable /boot/grub/grub.conf-xen
+		else
+			echo 'The image is not setup for dual hypervisor support.'
+		fi
+	elif [ 'X'$1 != 'Xquery' ]; then
+		echo 'Synopsis: dual_hypervisor { false | query | true }'
+                echo ''
+                echo "Execute with 'sudo' if setting status with either 'false' or 'true'."
+                echo ''
+                exit
+	fi
+
+	if [ -e '/boot/grub/grub.conf-kvm' ] && [ -e '/boot/grub/grub.conf-xen' ]; then
+		echo 'Dual hypervisor = True'
+	elif [ -e '/boot/grub/grub.conf-kvm-disable' ] && [ -e '/boot/grub/grub.conf-xen-disable' ]; then
+		echo 'Dual hypervisor = False'
+	else
+		echo 'The image is not setup for dual hypervisor support.'
+	fi
