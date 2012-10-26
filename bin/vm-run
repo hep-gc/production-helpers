@@ -390,9 +390,9 @@ else
         -o $OPTIONALFILE \
         2>/tmp/vm-run-$$.log \
         | awk 'NF>0 \
-           {if($3=="id"){print "   Virtual Machine ID=" $4} \
-           else if($1=="IP"){print "   IP address=" $3} \
-           else if($1=="Hostname:") {print "   Hostname=" $2} \
+           {if($3=="id"){print "   Virtual Machine ID = " $4} \
+           else if($1=="IP"){print "   IP address = " $3} \
+           else if($1=="Hostname:") {print "   Hostname = " $2} \
            else if($1=="Shutdown"){shutdown=$3 " " $4 " " $5 " " $6 " " $7 " " $8} \
            else if($6=="Unpropagated"){print "   Retrieving image from repository."} \
            else if($6=="Propagated"){print "   Unzipping and contextualizing the image."} \
