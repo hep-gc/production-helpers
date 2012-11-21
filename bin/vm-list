@@ -140,10 +140,11 @@
 
 		system("echo 'vws.factory=$cloud_fqn' >$tempfile"); 
 		@x = `$cloud_client \-\-conf $tempfile \-\-status 2\>/dev/null |
-			awk '/Workspace #|Shutdown time|State/ {
+			awk '/Workspace #|Shutdown time|Termination time|State/ {
 				if (\$3=="Workspace") {id=substr(\$4,2,length(\$4)-2); fqn=\$7;}
 				if (\$1=="State:") {state=\$2;}
-				if (\$1=="Shutdown") {print id " " fqn " " state " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8}
+				if (\$1=="Shutdown") {sd=1; print id " " fqn " " state " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8}
+				if (\$1=="Termination" && sd!=1) {print id " " fqn " " state " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8}
 				}'`;
 
 		for ($i=0; $i<=$#x; $i++) {
