@@ -361,7 +361,7 @@ NIMBUSDEPLOYMENT="<?xml version='1.0' encoding='UTF-8'?>
 </WorkspaceDeployment>"
 echo "$NIMBUSDEPLOYMENT" > $DEPLOYMENTFILE
 
-echo 'Attempting to boot '$_image', CPUs='$_cpus', RAM='$_ram'MB, blank space='$_blankspace'MB. This may take a few minutes...'
+echo 'Attempting to boot '$_image', CPUs='$_cpus', RAM='$_ram'MB, blank space='$_blankspace'MB. This may take a few minutes...' | tee -a ~/.cloud_helpers/vm-run.log
 
 #Boot machine
 if (( $_verbose > 0 )); then 
@@ -375,7 +375,8 @@ if (( $_verbose > 0 )); then
         --metadata ${NIMBUSFILE} \
         -s https://${_cloud_info_cols[2]}/wsrf/services/WorkspaceFactoryService \
         --exit-state Running \
-        -o $OPTIONALFILE 
+        -o $OPTIONALFILE \
+        | tee -a ~/.cloud_helpers/vm-run.log
 else
     $WORKSPACE \
         -z host \
@@ -389,6 +390,7 @@ else
         --exit-state Running \
         -o $OPTIONALFILE \
         2>/tmp/vm-run-$$.log \
+        | tee -a ~/.cloud_helpers/vm-run.log \
         | awk 'NF>0 \
            {if($3=="id"){print "   Virtual Machine ID = " $4} \
            else if($1=="IP"){print "   IP address = " $3} \

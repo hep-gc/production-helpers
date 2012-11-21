@@ -120,11 +120,21 @@
     }
 
 	# Retrieve the list of currently running batch VMS.
-	@x = `cloud_status -m | awk '/^[0-9]/ {print \$1}'`;
+#	@x = `cloud_status -m | awk '/^[0-9]/ {print \$1}'`;
+	@x = `cloud_status -m | tee - | awk '/^Total / {sw=sw+1; if (sw==1) print "/"} /^[0-9]/ {if (sw==0) print \$1; else print \$3}'`;
 	for ($i=0; $i<=$#x; $i++) {
 		chop($x[$i]);
 		}
-	$batch_vms = join(' ', @x);
+	$x = join(' ', @x);
+	($batch_vms, $x) = split('/ ', $x);
+	@batch_imgs = split(' ', $x);
+
+    # Retrieve image names for interactive VMs.
+    @x = `awk '/Attempting/ {count=split(gensub(",", "", "g", \$4), strings, "/")} /Hostname:/ {print \$2 " " strings[count]}' ~/.cloud_helpers/vm-run.log`;
+    foreach $x (@x) {
+        ($host, $image) = split(/[\s\n]+/, $x);
+        $VM{$host} = $image;
+    }
 
 	# Scan the clouds gathering data.
 	foreach $x (@clouds) {
@@ -150,8 +160,15 @@
 		for ($i=0; $i<=$#x; $i++) {
 			chop($x[$i]);
 			@y = split(/[\s]+/, $x[$i], 4);
-			$batch_or_interactive = 'N';
-			$batch_or_interactive = 'Y' if index(" $batch_vms ", " $y[0] ") > -1;
+            $ix = index(" $batch_vms ", " $y[0] ");
+            if ($ix > 0) {
+                $batch_or_interactive = 'Y';
+                @z = split(' ', substr($batch_vms,0,$ix));
+                $image = $batch_imgs[$#z+1];
+            } else {
+                $batch_or_interactive = 'N';
+                $image = $VM{$y[1]};
+            }
 
 			# Skip unwanted VM types.
 			next if $Opt{'type'}{'value'} ne 'all' && $Opt{'type'}{'value'} ne $batch_or_interactive;
@@ -166,6 +183,7 @@
 			$vm[$j]{'vm_start_date'} = $y[3];
 			$vm[$j]{'cloud_id'} = $cloud_id;
 			$vm[$j]{'cloud_fqn'} = $cloud_fqn;
+			$vm[$j]{'image'} = $image;
 
 			$xr{$vm[$j]{'vm_id'}} = $j;
 		}
@@ -175,10 +193,10 @@
 	# Display results.
 	if ($vm[0]>0) {
 		if ($Opt{'kill'}{'value'} eq '' || $Opt{'kill'}{'value'} eq '?') {
-			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '  ID', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Shutdown Time');
-			printf ("%4s %-32s %-6s %-12s %-12s %s\n", '----', '--------------------------------', '------', '------------', '------------', '--------------------------------');
+			printf ("%4s %-32s %-6s %-12s %-12s %-28s %s\n", '  ID', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Shutdown Time', 'Image');
+			printf ("%4s %-32s %-6s %-12s %-12s %-28s %s\n", '----', '--------------------------------', '------', '------------', '------------', '----------------------------', '------------------------');
 			for ($i=1; $i<=$vm[0]; $i++) {
-				printf ("%4d %-32s %3s    %-12s %-12s %s\n", $i, $vm[$i]{'vm_fqn'}, $vm[$i]{'vm_batch'}, $vm[$i]{'vm_state'}, $vm[$i]{'cloud_id'}, $vm[$i]{'vm_start_date'});
+				printf ("%4d %-32s %3s    %-12s %-12s %s %s\n", $i, $vm[$i]{'vm_fqn'}, $vm[$i]{'vm_batch'}, $vm[$i]{'vm_state'}, $vm[$i]{'cloud_id'}, $vm[$i]{'vm_start_date'}, $vm[$i]{'image'});
 				}
 			}
 
