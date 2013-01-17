@@ -1,8 +1,8 @@
 # Production Helpers
 
-## Scripts to ease the use of interactive processing environment. This repository
-## (production-helpers) was forked from "vm-helpers" and modified to integrate with
-## Cloud Scheduler (VM batch scheduler) and Repoman (image repository manager).
+Scripts to ease the use of interactive processing environment. This repository
+(production-helpers) was forked from "vm-helpers" and modified to integrate with
+Cloud Scheduler (VM batch scheduler) and Repoman (image repository manager).
 
 vm-kill                 - A script to shutdown and destroy interactive VMs.
 
