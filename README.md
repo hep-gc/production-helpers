@@ -1,6 +1,15 @@
 # Production Helpers
 
-## Scripts to ease the use of a Condor/Cloud Scheduler batch processing environment.
+## Scripts to ease the use of interactive processing environment. This repository
+## (production-helpers) was forked from "vm-helpers" and modified to integrate with
+## Cloud Scheduler (VM batch scheduler) and Repoman (image repository manager).
+
+vm-kill                 - A script to shutdown and destroy interactive VMs.
+
+vm-list                 - A script to list running VMs.
+
+vm-run                  _ A script to instantiate a VM.
+
 
 The following scripts all require a running MyProxy server to manage X509 proxy credentials
 and require the user to set the MYPROXY_SERVER environment variable to indicate its URL.
