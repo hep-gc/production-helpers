@@ -361,6 +361,7 @@ NIMBUSDEPLOYMENT="<?xml version='1.0' encoding='UTF-8'?>
 </WorkspaceDeployment>"
 echo "$NIMBUSDEPLOYMENT" > $DEPLOYMENTFILE
 
+echo " " > ~/.cloud_helpers/vm-run.log
 echo 'Attempting to boot '$_image', CPUs='$_cpus', RAM='$_ram'MB, blank space='$_blankspace'MB. This may take a few minutes...' | tee -a ~/.cloud_helpers/vm-run.log
 
 #Boot machine
@@ -376,7 +377,10 @@ if (( $_verbose > 0 )); then
         -s https://${_cloud_info_cols[2]}/wsrf/services/WorkspaceFactoryService \
         --exit-state Running \
         -o $OPTIONALFILE \
-        | tee -a ~/.cloud_helpers/vm-run.log
+        > >(tee -a ~/.cloud_helpers/vm-run.log) \
+        2> >(tee /tmp/vm-run-$$.log)
+
+    any_errors=$(stat -c%s /tmp/vm-run-$$.log)
 else
     $WORKSPACE \
         -z host \
@@ -415,3 +419,7 @@ rm -f ${OPTIONALFILE}
 rm -f ${DEPLOYMENTFILE}
 rm -f ${EPRFILE}
 
+if (( $any_errors > 0 )); then
+    exit 1
+fi
+exit 0
