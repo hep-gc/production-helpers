@@ -12,7 +12,7 @@
 
 	$Opt{'cloud'}{'value'} = 'nrc'; 
 	$Opt{'kill'}{'value'} = ''; 
-	$Opt{'type'}{'value'} = 'N'; 
+	$Opt{'type'}{'value'} = 'all'; 
 
     # Issue warning if using save (static) cloud status.
     if (-e "$ENV{'HOME'}/.cloud_helpers/cloud_status") {
