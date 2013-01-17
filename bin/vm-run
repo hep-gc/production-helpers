@@ -48,7 +48,7 @@ Options:
 
 if [ ! -e $WORKSPACE ]; then
 	echo 'Nimbus cloud client must be installed in /opt.'
-	exit
+	exit 1
 fi
 
 # Issue warning if using save (static) cloud status.
@@ -66,7 +66,7 @@ while [ "$1" != "" ]; do
 								_image_info_cols=( $_image_info )
 								if [ 'X'${_image_info_cols[0]} == 'X' ]; then
 									echo "Error: Specified repoman image '$1' does not exist. Use 'repoman li' to list valid images."
-									exit
+									exit 1
 								fi
 								if [ ${_image_info_cols[5]} == 'None' ]; then
 									_image=${_image_info_cols[2]}
@@ -138,7 +138,7 @@ while [ "$1" != "" ]; do
                                 fi
                                 ;;
         -h | --help )           echo "$USAGE"
-                                exit
+                                exit 0
                                 ;;
         * )                     echo "$USAGE"
                                 exit 1
@@ -169,7 +169,7 @@ if [ 'X'$_cloud == 'X' ] || [ 'X'$_image == 'X' ]; then
 	echo "       (/usr/local/etc/vm-run.conf)."
 	echo ""
 	echo "$USAGE"
-	exit
+	exit 1
 fi
 
 if [  -e ~/.cloud_helpers/cloud_status ]; then
@@ -181,7 +181,7 @@ fi
 _cloud_info_cols=( $_cloud_info )
 if [ 'X'${_cloud_info_cols[0]} == 'X' ]; then
 	echo "Error: The specified cloud '$_cloud' does not exist. Use 'vm-run --list' to list valid clouds."
-	exit
+	exit 1
 fi
 
 if [[ $_image =~ '__hypervisor__' ]]; then
@@ -256,7 +256,7 @@ else
 			<credentialToCopy>$(cat $default_proxy)</credentialToCopy>"
 		else
 			echo 'In order to use https propagation, you need to have a valid grid proxy credential (use "cloud-logon" command) or provide one via the "-t" option if it is in a non-standard location.'
-			exit
+			exit 1
 		fi
 	fi
 fi
