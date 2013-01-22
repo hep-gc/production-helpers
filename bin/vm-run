@@ -229,6 +229,10 @@ else
 fi
 
 if [ ${_sshpub} ]; then
+    if [ ! -e ${_sshpub} ]; then
+        echo 'The specified ssh public key (' ${_sshpub} ') does not exist. Either specify a different ssh public key or generate a new one with ssh-keygen.'
+        exit 1
+    fi
     optional_contents="$optional_contents
 <filewrite>
   <content>$(cat $_sshpub)</content>
