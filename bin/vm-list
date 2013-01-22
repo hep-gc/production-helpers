@@ -185,7 +185,7 @@
 			$vm[$j]{'cloud_fqn'} = $cloud_fqn;
 			$vm[$j]{'image'} = $image;
 
-			$xr{$vm[$j]{'vm_id'}} = $j;
+			$xr{$vm[$j]{'cloud_id'}.'-'.$vm[$j]{'vm_id'}} = $j;
 		}
 
 	}
@@ -193,10 +193,10 @@
 	# Display results.
 	if ($vm[0]>0) {
 		if ($Opt{'kill'}{'value'} eq '' || $Opt{'kill'}{'value'} eq '?') {
-			printf ("%4s %-32s %-6s %-12s %-12s %-28s %s\n", '  ID', 'Virtual Machine', 'Batch?', 'State', 'Cloud', 'Shutdown Time', 'Image');
-			printf ("%4s %-32s %-6s %-12s %-12s %-28s %s\n", '----', '--------------------------------', '------', '------------', '------------', '----------------------------', '------------------------');
+			printf ("%-16s %-32s %-6s %-12s %-28s %s\n", 'ID', 'Virtual Machine', 'Batch?', 'State', 'Shutdown Time', 'Image');
+			printf ("%-16s %-32s %-6s %-12s %-28s %s\n", '----------------', '--------------------------------', '------', '------------', '----------------------------', '------------------------');
 			for ($i=1; $i<=$vm[0]; $i++) {
-				printf ("%4d %-32s %3s    %-12s %-12s %s %s\n", $i, $vm[$i]{'vm_fqn'}, $vm[$i]{'vm_batch'}, $vm[$i]{'vm_state'}, $vm[$i]{'cloud_id'}, $vm[$i]{'vm_start_date'}, $vm[$i]{'image'});
+				printf ("%-16s %-32s %3s    %-12s %-12s %s %s\n", $vm[$i]{'cloud_id'}.'-'.$vm[$i]{'vm_id'}, $vm[$i]{'vm_fqn'}, $vm[$i]{'vm_batch'}, $vm[$i]{'vm_state'}, $vm[$i]{'vm_start_date'}, $vm[$i]{'image'});
 				}
 			}
 
@@ -251,13 +251,14 @@ sub KillAll {
 }
 
 sub KillList {
+    my $vm;
 	my @list = split(/[,\n]+/, shift());
 	foreach $vm (@list) {
-		KillVM($vm, 'shutdown');
+		KillVM($xr{$vm}, 'shutdown');
 	}
 
 	foreach $vm (@list) {
-		KillVM($vm, 'kill');
+		KillVM($xr{$vm}, 'kill');
 	}
 	return;
 }
