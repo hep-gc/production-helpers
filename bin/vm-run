@@ -56,23 +56,11 @@ if [ -e ~/.cloud_helpers/cloud_status ]; then
     echo "Warning: Using saved ~/.cloud_helpers/cloud_status."
 fi
 
-
 # Parse command line arguments
 while [ "$1" != "" ]; do
     case $1 in
 		-R | --repomanimage )   shift
 								_repomanimage=$1
-								_image_info=`repoman li $_repomanimage | awk '/file_url/'`
-								_image_info_cols=( $_image_info )
-								if [ 'X'${_image_info_cols[0]} == 'X' ]; then
-									echo "Error: Specified repoman image '$1' does not exist. Use 'repoman li' to list valid images."
-									exit 1
-								fi
-								if [ ${_image_info_cols[5]} == 'None' ]; then
-									_image=${_image_info_cols[2]}
-								else
-									_image=${_image_info_cols[5]}
-								fi
 								;;
 		-C | --configure )      if [ ! -e ~/.cloud_helpers/vm-run.conf ]; then
 									mkdir -p ~/.cloud_helpers
@@ -145,6 +133,27 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
+
+# Ensure user has a proxy certificate valid for at least another 5 minutes.
+x=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`;
+if [[ $x -lt 300 ]]; then 
+    cloud-logon
+fi
+
+if [ "$_repomanimage" ]; then
+    _image_info=`repoman li $_repomanimage | awk '/file_url/'`
+    _image_info_cols=( $_image_info )
+    if [ 'X'${_image_info_cols[0]} == 'X' ]; then
+        echo "Error: Specified repoman image '$1' does not exist. Use 'repoman li' to list valid images."
+        exit 1
+    fi
+
+    if [ ${_image_info_cols[5]} == 'None' ]; then
+        _image=${_image_info_cols[2]}
+    else
+        _image=${_image_info_cols[5]}
+    fi
+fi
 
 # Set defaults
 [ "$_arch" ] || _arch=$ARCH
