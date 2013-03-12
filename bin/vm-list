@@ -200,7 +200,7 @@
 			$vm[$j]{'vm_state'} = $y[2];
 			$vm[$j]{'vm_start_date'} = $y[3];
 			$vm[$j]{'cloud_id'} = $cloud_id;
-			$vm[$j]{'cloud_fqn'} = $cloud_fqn;
+			$vm[$j]{'cloud_fqn'} = $clouds{$cloud_id}{'host'};
 			$vm[$j]{'image'} = $image;
 
 			$xr{$vm[$j]{'cloud_id'}.'-'.$vm[$j]{'vm_id'}} = $j;
