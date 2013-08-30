@@ -157,7 +157,7 @@
 	# Scan the clouds gathering data.
 	$vm[0] = 0;
 	foreach $cloud_id (sort(keys(%clouds))) {
-        next if lowercase($clouds{$cloud_id}{'enabled'}) ne 'true';
+#        next if lowercase($clouds{$cloud_id}{'enabled'}) ne 'true';
 		next if $Opt{'cloud'}{'value'} ne 'all' && $Opt{'cloud'}{'value'} ne lowercase($cloud_id);
 
 		@x = `nmap -PN -p T:$clouds{$cloud_id}{'port'} $clouds{$cloud_id}{'host'} | awk '/$clouds{$cloud_id}{'port'}\\/tcp/ \{print \$2\}'`;
