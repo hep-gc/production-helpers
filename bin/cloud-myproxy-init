@@ -40,33 +40,39 @@ if (( $NOW >= $WARNING_DATE )); then
 	echo 'WARNING!'
 fi
 
-# Prompt for grid cert pass phrase.
-CERT_SUBJECT=`grid-cert-info -subject`
+if [ "X$1" == 'X' ]; then
+    # Prompt for grid cert pass phrase.
+    CERT_SUBJECT=`grid-cert-info -subject`
 
-echo "Your identity: " $CERT_SUBJECT
-read -s -p "Enter GRID pass phrase for this identity: " gridpass
-echo ""
+    echo "Your identity: " $CERT_SUBJECT
+    read -s -p "Enter GRID pass phrase for this identity: " gridpass
+    echo ""
 
-# Verify Grid Password
-[[ -z $X509_USER_KEY ]] && X509_USER_KEY="$HOME/.globus/userkey.pem"
-echo $gridpass | openssl rsa -in $X509_USER_KEY -noout -passin stdin
+    # Verify Grid Password
+    [[ -z $X509_USER_KEY ]] && X509_USER_KEY="$HOME/.globus/userkey.pem"
+    echo $gridpass | openssl rsa -in $X509_USER_KEY -noout -passin stdin
 
-read -s -p "Enter new MyProxy pass phrase: " myproxypass
-echo ""
-read -s -p "Confirm new MyProxy pass phrase: " myproxypassconfirmation
-echo ""
+    read -s -p "Enter new MyProxy pass phrase: " myproxypass
+    echo ""
+    read -s -p "Confirm new MyProxy pass phrase: " myproxypassconfirmation
+    echo ""
 
-if [ "$myproxypass" != "$myproxypassconfirmation" ] ; then
+    if [ "$myproxypass" != "$myproxypassconfirmation" ] ; then
 
-    echo "Your passwords don't match. Please try again." >&2
-    exit 1
-fi
+        echo "Your passwords don't match. Please try again." >&2
+        exit 1
+    fi
 
-if [ ${#myproxypass} -lt 6 ]; then
-    echo "Passphrase must be at least 6 characters long." >&2
-    exit 1
-fi
+    if [ ${#myproxypass} -lt 6 ]; then
+        echo "Passphrase must be at least 6 characters long." >&2
+        exit 1
+    fi
     
+else
+    gridpass=$1
+    myproxypass=$1
+fi
+
 echo "Talking to MyProxy server..."
 
 export gridpass myproxypass

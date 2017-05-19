@@ -4,8 +4,12 @@
 set -e
 EXPECTSCRIPT=`mktemp /tmp/expect.XXXXXX`
 
-read -s -p "Enter MyProxy pass phrase: " myproxypass
-echo ""
+if [ "X$1" == 'X' ]; then
+    read -s -p "Enter MyProxy pass phrase: " myproxypass
+    echo ""
+else
+    myproxypass=$1
+fi
 
 export myproxypass
 

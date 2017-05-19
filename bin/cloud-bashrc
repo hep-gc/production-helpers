@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash --debug
 	if [[ ${1:0:1} != "-" ]]; then exit; fi
 
 	if [[ $1 == "-h" || $1 == "--help" || $1 == "-help" ]]; then
@@ -32,8 +32,22 @@
 		exit
 	fi
 
+function get_password {
+    # Prompt for grid cert pass phrase.
+    CERT_SUBJECT=`grid-cert-info -subject`
+
+    echo "Your identity: " $CERT_SUBJECT
+    read -s -p "Enter GRID pass phrase for this identity: " gridpass
+    echo ""
+
+    # Verify Grid Password
+    [[ -z $X509_USER_KEY ]] && X509_USER_KEY="$HOME/.globus/userkey.pem"
+    echo $gridpass | openssl rsa -in $X509_USER_KEY -noout -passin stdin
+}
+
 	gp_min_time_to_live=10800 # 3 hours
 	mp_min_time_to_live=604800 # 168 hours
+
 
 #	Re-initialize the MyProxy certificate if it has less than 12 hours to live.
 	declare -i gp=`grid-proxy-info 2>/dev/null | awk '/timeleft/ {split($3, words, ":"); print (words[1]*3600)+(words[    2]*60)+words[3]}'`
@@ -41,18 +55,24 @@
 		declare -i mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
 		if (($mp < $mp_min_time_to_live)); then
 			set -e
-			cloud-myproxy-init
+                        if [ "X$gridpass" == 'X' ]; then
+                            get_password
+                        fi
+			cloud-myproxy-init $gridpass
 		fi
 	fi
 
 #	Re-initialize the local certificate if it has less than 3 hours to live.
 	if (($gp < $gp_min_time_to_live)); then 
-		cloud-myproxy-logon
+                if [ "X$gridpass" == 'X' ]; then
+                    get_password
+                fi
+		cloud-myproxy-logon $gridpass
 		
 		declare -i mp=`myproxy-info 2>/dev/null | awk '/timeleft:/ {split($2, words, ":"); print (words[1]*3600)+(words[2]*60)+words[3]}'`
 		if (($mp < $mp_min_time_to_live)); then
 			set -e
-			cloud-myproxy-init
+			cloud-myproxy-init $gridpass
 		fi
 	fi
 
