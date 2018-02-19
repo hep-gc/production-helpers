@@ -18,10 +18,12 @@ IMPORTANT: The identifier after HOST in the first line needs to be the same name
 
 To use the tools with Amazon, aws tools need to be installed. To do so as a user, one can do:
    pip install awscli --upgrade --user
+and then add $HOME/.local/bin to $PATH
 
    Note: This installs a different version of python for aws which doesn't seem to be compatible with cloud_scheduler, resulting in cloud_status and
-         cloud_admin to be no longer working as a user when the new install is in $PATH
-         
+         cloud_admin to be no longer working
+         To use cloud_status and cloud_admin again, one needs to install as user the new boto3 too:
+         pip install boto3 --upgrade --user
          
 
 # Description
@@ -35,6 +37,8 @@ It's not to be used interactively, but by the tools in the local-directory.
 ## getinfo.sh
 
 Give information about VMs on a specific cloud and can also perform actions on those.
+
+NOTE: Currently not supporting Openstack API v3
 
 usage: ./getinfo.sh CLOUD ACTION
 

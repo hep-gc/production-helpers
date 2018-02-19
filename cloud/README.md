@@ -28,7 +28,7 @@ FILE : file that contains the IP addresses of all VMs on the cloud
 example: ./changegfalfs.sh disable 20 cc-west-b.ip
 
 
-## checkjobs.sh
+## checkjobs-belle.sh
 
 A tool that compares the current number of Belle-II payload jobs against the number of running condor jobs.
 If the number of payload jobs is different to the number of running condor jobs, then it will output in 1 line per VM:
@@ -48,7 +48,7 @@ example: ./checkjobs.sh cc-west-b.ip 8
 
 ## checkjobs-atlas.sh
 
-Same as checkjobs.sh, but checks for Atlas payload jobs.
+Same as checkjobs-belle.sh, but checks for Atlas payload jobs.
 
 
 # ganglia-belle.sh

@@ -3,8 +3,11 @@
 ##################
 #Global Variables#
 ##################
+VO=belle
 server=bellecs.heprc.uvic.ca
 port=3121
+
+
 
 cloud=$1 
 CPUs=$2 
@@ -30,7 +33,7 @@ removeBadVMs()
 {
  local cloud=$1
  local badIP=$2
- echo "$badIP is bad" >&2
+ echo "$badIP is not reachable, terminating" >&2
  ssh -tt  -p$port $server  "sudo ./getinfo.sh $cloud list|grep \"$badIP  \"|cut -d' ' -f2|xargs cloud_admin -c $cloud -k -n " &>/dev/null &&  echo removed $badIP 
 }
 
@@ -59,11 +62,12 @@ checkVMstatus()
   grep -F -x -v -f $cloud-ok.ip $cloud.ip >$cloud.diff
   file="$cloud.diff"
  fi
- echo checking for errors.... >&2 
+ echo "    checking for errors..." >&2 
  checkerror $cloud $file
  echo scp to cloud: scp $file root@$cloud:. 
  scp $file $cloud:.
- date  ssh -A $cloud "./checkjobs.sh $file $CPUs" 2>/dev/null|while read line
+ echo "    checking for running payload..." >&2 
+ ssh -A $cloud "./checkjobs-$VO.sh $file $CPUs" 2>/dev/null|while read line
  do
   badIP=$(echo $line|grep  "^$searchstring"|cut -d" " -f1)
   if [ "$badIP" != "" ];
@@ -81,6 +85,9 @@ testqueue()
   ssh -t $server -p$port ./testqueue.sh
 }
 
+############
+# MAIN     #
+############
 while [ $start -eq 1 ] 
 do 
  let changedvar=0

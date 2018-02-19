@@ -25,7 +25,7 @@ IMPORTANT: The identifier after	HOST in	the first line needs to	be the same name
 Script that can be used to increase the usage of a cloud. 
 It will change the number of running VMs up to a maximum with a given increment per interval, only increasing the number of VMs if the VMs started in the previous interval all running payload, otherwise it will wait until they run payloads.
 
-Note: currently only working for Belle-II jobs
+Note: VO, cloudscheduler machine, and ssh port are configured static within at the top
 
 
 usage: ./changeVMs.sh CLOUD  CPUs MAXAMOUNT IPSTRING INCREMENT SLEEPTIME
@@ -63,6 +63,9 @@ For VMs that do not run payload on all job slots, it will give out in 1 line per
 - the number of running condor jobs
 - the IP of the VM
 - the job slots that do not run a payload
+
+Note: VO, cloudscheduler machine, and ssh port are configured static within at the top
+
 
 usage: ./checkVMtatus.sh CLOUD CPUs
 

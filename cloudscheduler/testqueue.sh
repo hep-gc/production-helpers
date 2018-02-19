@@ -1,7 +1,11 @@
 #!/bin/bash
+#####################
 
 let minidle=150; #minimum idle jobs in queue before new ones can be submitted
 
+####################
+
+############################
 loopvar=1; 
 while [ $loopvar -eq 1 ]; 
 do 

@@ -4,9 +4,9 @@ LANG=C
 
 case $1 in
   help)
-    echo " usage: sudo ./getinfo.sh CLOUDNAME COMMAND"
+    echo " usage: ./getinfo.sh CLOUDNAME COMMAND"
     echo "        CLOUDNAME: name of the cloud, e.g.cc-west"
-    echo "        COMMAND: any nova command or ip to get a list of IPs"
+    echo "        COMMAND: nova commands or ip to get a list of IPs"
     exit
   ;;
 esac
@@ -75,8 +75,8 @@ getCSVMs()
 {
  local cloud=$1
  local field=$2
- #sudo cloud_status -m 2>/dev/null|grep $cloud|grep -v "Retir"|cut -d" " -f$field #Does not give out retireing VMs
- sudo cloud_status -m 2>/dev/null|grep $cloud|cut -d" " -f$field 
+ #cloud_status -m 2>/dev/null|grep $cloud|grep -v "Retir"|cut -d" " -f$field #Does not give out retireing VMs
+ cloud_status -m 2>/dev/null|grep $cloud|cut -d" " -f$field 
 }
 
 getOSVMs()
