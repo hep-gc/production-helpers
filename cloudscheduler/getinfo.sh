@@ -129,7 +129,7 @@ listVMs()
  setconfig $cloud
  if [[ $cloud =~ amazon ]]
  then
-   aws ec2 describe-instances --region $region --output text|grep ASSOCIATION|sed 's/\t */ /g;'|cut -d" " -f3|uniq
+   aws ec2 describe-instances --region $region --output text|grep INSTANCES|sed 's/\t */ /g;'|cut -d" " -f14
  else
   nova --insecure --os-username $OS_USERNAME --os-password $OS_PASSWORD --os-tenant-name $OS_TENANT_NAME --os-auth-url $OS_AUTH_URL $command 2>/dev/null
  fi
