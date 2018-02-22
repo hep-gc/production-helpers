@@ -43,8 +43,8 @@ It will change the number of running VMs up to a maximum with a given increment 
 
 
 ### example:  
-- ```./changeVMs.sh cc-west-b 8 "10.39" 5 10```
-  - On cc-west-b the usage will be increased by 5 VMs every 10min, if the 8-core VMs started in the previous cycle are already running payload(basf2), otherwise it will sleep for 10 min and check again. 
+- ```./changeVMs.sh cc-west-b 8 250 "10.39" 5 10```
+  - On cc-west-b the usage will be increased by 5 VMs every 10min until 250 are running, if the 8-core VMs started in the previous cycle are already running payload(basf2), otherwise it will sleep for 10 min and check again. 
   - It will also wait with increasing the number of VMs if there are not enough idle jobs in the queue.   
   - VMs on cc-west-b are identified by IPs starting with "10.39" and these machines that are not reachable get removed in the next cycle of the script.
 
