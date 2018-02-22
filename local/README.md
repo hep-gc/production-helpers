@@ -65,7 +65,7 @@ For VMs that do not run payload on all job slots, it will give out in 1 line per
 
 
 ## usage: 
-```./checkVMtatus.sh CLOUD CPUs```
+```./checkVMstatus.sh CLOUD CPUs```
 
 - CLOUD : name of the cloud information is wanted for
   - needs to be same name as defined in cloudscheduler
