@@ -5,6 +5,29 @@ server=bellecs.heprc.uvic.ca
 port=3121
 ##################################
 
+
+gethelp()
+{
+    echo " usage: ./checkVMstatus.sh CLOUD CPUs"
+    echo "        CLOUD: name of the cloud information is wanted for"
+    echo "        CPUs : number of how many CPUs a VM on that cloud has"
+    echo ""
+}
+
+case $1 in
+  help)
+    gethelp
+    exit
+  ;;
+esac
+
+if [ "$#" -ne 2 ];
+then
+ gethelp
+ exit
+fi
+
+
 cloud=$1
 CPUs=$2
 

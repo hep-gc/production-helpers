@@ -1,5 +1,4 @@
 #!/bin/bash
-
 ##################
 #Global Variables#
 ##################
@@ -8,7 +7,7 @@ server=bellecs.heprc.uvic.ca
 port=3121
 
 
-
+######################
 cloud=$1 
 CPUs=$2 
 maxamount=$3
@@ -21,6 +20,35 @@ currentN=0
 maxN=0
 start=1
 #####################
+
+gethelp()
+{
+    echo " usage: ./changeVMs.sh CLOUD CPUs MAXAMOUNT IPSTRING INCREMENT SLEEPTIME"
+    echo "         CLOUD    : name of the cloud information is wanted for"
+    echo "         CPUs     : number of how many CPUs a VM on that cloud has"
+    echo "         MAXAMOUNT: max number of VMs that should run through a specific cloudscheduler on CLOUD"
+    echo "         IPSTRING : identifier for the IPs on that cloud to identify VMs that are not reachable, e.g.\"10.39\" "
+    echo "         INCREMENT: amount by which the number of VMs is increased per interval"
+    echo "         SLEEPTIME: time to wait until the number of VMs is increased again"
+    echo ""
+}
+
+case $1	in
+  help)
+    gethelp
+    exit
+  ;;
+esac
+
+if [ "$#" -ne 6 ];
+then
+ gethelp
+ exit
+fi
+
+
+
+
 
 provideIPFile()
 {

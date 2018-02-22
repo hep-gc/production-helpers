@@ -1,5 +1,27 @@
 #!/bin/bash
 
+gethelp()
+{
+    echo " usage: ./checkjobs-atlas.sh FILE DEFAULTNUMBER"
+    echo "        FILE: file that contains the IP addresses of all VMs on the cloud"
+    echo "        DEFAULTNUMBER: number of payload jobs that should run on the VM"
+    echo ""
+}
+
+case $1 in
+  help)
+    gethelp
+    exit
+  ;;
+esac
+
+if [ "$#" -ne 2 ];
+then
+ gethelp
+ exit
+fi
+
+
 file=$1
 let defaultnumber=$2
 let defaultarray=$((defaultnumber-1))

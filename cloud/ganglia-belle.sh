@@ -1,5 +1,27 @@
 #!/bin/bash
 
+gethelp()
+{
+    echo " usage: ./ganglia-belle.sh FILE "
+    echo "        FILE: file that contains the IP addresses of all VMs on the cloud"
+    echo ""
+}
+
+case $1	in
+  help)
+    gethelp
+    exit
+  ;;
+esac
+
+if [ "$#" -ne 1 ];
+then
+ gethelp
+ exit
+fi
+
+
+
 file=$1
 let basf2number=0
 let fillernumber=0

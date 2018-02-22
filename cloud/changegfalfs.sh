@@ -1,5 +1,28 @@
 #!/bin/bash
 
+gethelp()
+{
+    echo " usage: ./changegfalfs.sh ACTION QUANTITY FILE"
+    echo "        ACTION: one of {mount, unmount, use, unuse, onthefly, notonthefly, enable, disable, check} "
+    echo "        QUANTITY: number of VMs the ACTION should apply to"
+    echo "        FILE: file that contains the IP addresses of all VMs on the cloud"
+    echo ""
+}
+
+case $1 in
+  help)
+    gethelp
+    exit
+  ;;
+esac
+
+if [ "$#" -ne 3 ];
+then
+ gethelp
+ exit
+fi
+
+
 action=$1
 quantity=$2
 file=$3 

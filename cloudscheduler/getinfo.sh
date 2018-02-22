@@ -1,15 +1,26 @@
 #!/bin/bash
 LANG=C
 
+gethelp()
+{
+    echo " usage: ./getinfo.sh CLOUDNAME COMMAND"
+    echo "        CLOUDNAME: name of the cloud, e.g.cc-west-b"
+    echo "        COMMAND: nova commands or ip to get a list of IPs"
+}
 
 case $1 in
   help)
-    echo " usage: ./getinfo.sh CLOUDNAME COMMAND"
-    echo "        CLOUDNAME: name of the cloud, e.g.cc-west"
-    echo "        COMMAND: nova commands or ip to get a list of IPs"
+    gethelp
     exit
   ;;
 esac
+
+if [ "$#" -lt 2 ];
+then
+ gethelp
+ exit
+fi
+
 
 cloudname=$1
 
