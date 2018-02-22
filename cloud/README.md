@@ -54,7 +54,7 @@ If the number of payload jobs is different to the number of running condor jobs,
 Same as checkjobs-belle.sh, but checks for Atlas payload jobs.
 
 
-# ganglia-belle.sh
+## ganglia-belle.sh
 
 Reports the usage statistics for the whole cloud to a ganlia server. To use it, the machine where it runs must be configured to report to a central Ganglia server and it must have gmetric installed.
 
