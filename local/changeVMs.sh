@@ -152,12 +152,15 @@ do
   if [ $changedvar -eq 1 ];
   then
     echo "waiting for $maxdiff new VMs to start..."
+    timetosleep=$(($maxdiff*60)) 
+    echo "sleeping an initial $maxdiff min at $(date)"
+    sleep $timetosleep
   else
     echo "$missingbasf2 new VM(s) still not running basf2 at $(date)"
+   timetosleep=$(($sleeptime*60)) 
+   echo sleeping $sleeptime min...
+   sleep $timetosleep
   fi 
-  timetosleep=$(($sleeptime*60)) 
-  echo sleeping $sleeptime min...
-  sleep $timetosleep
  fi
 done
 

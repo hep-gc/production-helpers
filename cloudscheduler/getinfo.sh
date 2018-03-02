@@ -21,7 +21,16 @@ then
  exit
 fi
 
+#if [ "$#" -gt 2 ];
+#then
+# runvar=1
+# for i in #@
+# do
+#  echo $ 
+# exit
+#fi
 
+exit
 cloudname=$1
 
 OS_AUTH_URL=""
@@ -151,15 +160,28 @@ novacommand()
 {
  local cloud=$1
  local command=$2
- local option=$3
+ local option="$3"
  setconfig $cloud
  if [[ $cloud =~ amazon ]]
  then
   echo $cloud not supported for executing nova commands
  else
+ if [ "$command" == "glance" ];
+ then
+   glancecommand $cloud $option
+ fi
   nova --insecure --os-username $OS_USERNAME --os-password $OS_PASSWORD --os-tenant-name $OS_TENANT_NAME --os-auth-url $OS_AUTH_URL $command $option 2>/dev/null
  fi
 }
+
+glancecommand()
+{
+ local cloud=$1
+ local command="$2"
+ glance --insecure --os-username $OS_USERNAME --os-password $OS_PASSWORD --os-tenant-name $OS_TENANT_NAME --os-auth-url $OS_AUTH_URL $command 
+}
+
+
 
 case $2 in
  ip)
@@ -171,6 +193,6 @@ case $2 in
   exit
   ;;
  *)
-  novacommand $cloudname $2 $3
+  novacommand $cloudname $2 "$3"
 esac
 exit
