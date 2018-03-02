@@ -21,16 +21,6 @@ then
  exit
 fi
 
-#if [ "$#" -gt 2 ];
-#then
-# runvar=1
-# for i in #@
-# do
-#  echo $ 
-# exit
-#fi
-
-exit
 cloudname=$1
 
 OS_AUTH_URL=""
