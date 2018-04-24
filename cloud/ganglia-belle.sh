@@ -1,27 +1,5 @@
 #!/bin/bash
 
-gethelp()
-{
-    echo " usage: ./ganglia-belle.sh FILE "
-    echo "        FILE: file that contains the IP addresses of all VMs on the cloud"
-    echo ""
-}
-
-case $1	in
-  help)
-    gethelp
-    exit
-  ;;
-esac
-
-if [ "$#" -ne 1 ];
-then
- gethelp
- exit
-fi
-
-
-
 file=$1
 let basf2number=0
 let fillernumber=0
@@ -34,7 +12,7 @@ getnumber()
 {
  local host=$1
  local counter=$2
- ssh -c arcfour -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -n -l root $host 'basf2=$(ps axf|grep -c "[_] bash basf2exec.sh");cpus=$(grep processor /proc/cpuinfo -c); condor=$(ps axf|grep -c "[_] condor_starter"); filler=$(count=0;for j in $(find /var/lib/condor/execute/dir_*/ -maxdepth 1 -name DIRAC*); do number=$(grep -c 'exec.py' $(ls -t $j/*.jdl|head -n1));count=$((count+number)); done;echo $count); echo $basf2 $filler $condor $cpus' 2>/dev/null >/tmp/file$counter
+ ssh -c arcfour -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -n -l root $host 'basf2=$(ps axf|grep -c "[_] basf2");cpus=$(grep processor /proc/cpuinfo -c); condor=$(ps axf|grep -c "[_] condor_starter"); filler=$(count=0;for j in $(find /var/lib/condor/execute/dir_*/ -maxdepth 1 -name DIRAC*); do number=$(grep -c 'exec.py' $(ls -t $j/*.jdl|head -n1));count=$((count+number)); done;echo $count); echo $basf2 $filler $condor $cpus' 2>/dev/null >/tmp/file$counter
 }
 
 let counter=0
@@ -78,5 +56,6 @@ gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'CPUs
 gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'basf2_ratio' --value $basf2ratio --unit 'Percentage' 
 gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'filler_ratio' --value $fillerratio --unit 'Percentage'
 gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'condor_ratio' --value $jobratio --unit 'Percentage' 
+gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'number_VMs' --value $((counter+1)) --unit 'Percentage' 
 
 
