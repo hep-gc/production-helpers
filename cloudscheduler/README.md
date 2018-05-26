@@ -39,7 +39,7 @@ It's not to be used interactively, but by the tools in the local-directory.
 
 Give information about VMs on a specific cloud and can also perform actions on those.   
 
-**NOTE**: Currently not supporting Openstack API v3.   
+**NOTE**: Currently not supporting all clouds.   
 
 
 ### usage: 
