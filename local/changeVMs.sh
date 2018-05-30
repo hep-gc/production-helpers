@@ -53,7 +53,7 @@ fi
 provideIPFile()
 {
  local cloud=$1
- ssh -t $server -p$port "sudo ./getinfo.sh $cloud ip >$cloud.ip" 
+ ssh -t $server -p$port "./getinfo.sh $cloud ip >$cloud.ip" 
  scp -P $port $server:$cloud.ip . 
 }
 
@@ -118,12 +118,19 @@ testqueue()
 ############
 while [ $start -eq 1 ] 
 do 
+ let missingbasf2=0
  let changedvar=0
+ let temp=0
  echo getting IPs...
  provideIPFile $cloud &>/dev/null
  echo checking for basf2 status...
- let missingbasf2=$(checkVMstatus $cloud $CPUs $searchString|grep -c slot)
- if [ $missingbasf2 -eq 0 ]; 
+ lines=$(checkVMstatus $cloud $CPUs $searchString|grep slot|cut -d" " -f1)
+ for i in  $lines
+ do
+  if [ "$i" == "" ]; then let temp=0;else let temp=$i;fi
+  missingbasf2=$(( temp + missingbasf2))
+ done 
+ if [ $missingbasf2 -lt 10 ]; 
  then 
   temparray=($(ssh $server -p$port "cloud_status -c $cloud" 2>/dev/null|grep True)) 
   let currentN=${temparray[2]}
@@ -156,7 +163,7 @@ do
     echo "sleeping an initial $maxdiff min at $(date)"
     sleep $timetosleep
   else
-    echo "$missingbasf2 new VM(s) still not running basf2 at $(date)"
+    echo "$missingbasf2 condor slots still not running basf2 at $(date)"
    timetosleep=$(($sleeptime*60)) 
    echo sleeping $sleeptime min...
    sleep $timetosleep
