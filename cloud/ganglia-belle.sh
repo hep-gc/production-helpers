@@ -13,7 +13,7 @@ getnumber()
  local host=$1
  local counter=$2
  scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null testVM.sh root@$host:.
- ssh -c arcfour -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -n -l root $host './testVM.sh' 2>/dev/null >/tmp/file$counter
+ ssh -c arcfour -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -n -l root $host "./testVM.sh $host" 2>/dev/null >/tmp/file$counter
 }
 
 let counter=0
@@ -33,7 +33,7 @@ do
  let fillernumber=$((fillernumber+numberarray[1]))
  let totalnumber=$((totalnumber+numberarray[2]))
  let cpunumber=$((cpunumber+numberarray[3]))
- if [ "${numberarray[4]}" != "0" ]; then echo runtime4=${numberarray[4]};let runtime=$((runtime+numberarray[4])); counter2=$((counter2+1));fi
+ if [ "${numberarray[4]}" != "0" ]; then echo runtime4=${numberarray[4]} at ${numberarray[5]};let runtime=$((runtime+numberarray[4])); counter2=$((counter2+1));fi
 done
  let counter=$((counter+1))
  if [ "$counter2" != "0" ];
