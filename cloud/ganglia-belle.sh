@@ -12,7 +12,10 @@ getnumber()
 {
  local host=$1
  local counter=$2
- ssh -c arcfour -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -n -l root $host 'basf2=$(ps axf|grep -c "[_] basf2");cpus=$(grep processor /proc/cpuinfo -c); condor=$(ps axf|grep -c "[_] condor_starter"); filler=$(count=0;for j in $(find /var/lib/condor/execute/dir_*/ -maxdepth 1 -name DIRAC*); do number=$(grep -c 'exec.py' $(ls -t $j/*.jdl|head -n1));count=$((count+number)); done;echo $count); echo $basf2 $filler $condor $cpus' 2>/dev/null >/tmp/file$counter
+ ssh -c arcfour -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -n -l root $host 'checkforchild(){ local parameter=$1;local tempvar=$(pgrep -P $1);if [ "$tempvar" != "" ]; then checkforchild $tempvar; else echo $parameter; fi };let runtime=0; let runtime2=0; for i in $(ps axf|grep [c]ondor_starter|cut -d" " -f1); do lastpid=$(checkforchild $i); if [ "$(ps $lastpid|grep -c basf2)" == "0" ]; then let runtime2=$(( $(date +%s) - $(date -d "$(ls -lt /proc/$lastpid|tail -n1|cut -d " " -f 6,7,8)" "+%s") )); if [ $runtime2 -gt $runtime ]; then runtime=$runtime2;fi;fi;done;basf2=$(ps axf|grep -c "[_] basf2");cpus=$(grep processor /proc/cpuinfo -c); condor=$(ps axf|grep -c "[_] condor_starter"); filler=$(count=0;for j in $(find /var/lib/condor/execute/dir_*/ -maxdepth 1 -name DIRAC*);do number=$(grep -c 'exec.py' $(ls -t $j/*.jdl|head -n1));count=$((count+number));done;echo $count);echo $basf2 $filler $condor $cpus $runtime;' 2>/dev/null >/tmp/file$counter
+# basf2=$(ps axf|grep -c "[_] basf2");cpus=$(grep processor /proc/cpuinfo -c); condor=$(ps axf|grep -c "[_] condor_starter");\
+# filler=$(count=0;for j in $(find /var/lib/condor/execute/dir_*/ -maxdepth 1 -name DIRAC*); do number=$(grep -c 'exec.py' $(ls -t $j/*.jdl|head -n1));\
+# count=$((count+number)); done;echo $count); echo $basf2 $filler $condor $cpus $runtime' 2>/dev/null >/tmp/file$counter
 }
 
 let counter=0
@@ -23,6 +26,7 @@ do
 done
 
 wait
+let counter2=0
 counter=$((counter-1))
 for i in $(seq 0 $counter)
 do
@@ -31,8 +35,11 @@ do
  let fillernumber=$((fillernumber+numberarray[1]))
  let totalnumber=$((totalnumber+numberarray[2]))
  let cpunumber=$((cpunumber+numberarray[3]))
+ if [ "${numberarray[4]}" != "0" ]; then echo runtime4=${numberarray[4]};let runtime=$((runtime+numberarray[4])); counter2=$((counter2+1));fi
 done
-
+ let counter=$((counter+1))
+ let runtime=$((runtime/counter2/60))
+ echo counter2=$counter2
 
 if [ $totalnumber -eq 0 ]; 
 then
@@ -56,6 +63,8 @@ gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'CPUs
 gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'basf2_ratio' --value $basf2ratio --unit 'Percentage' 
 gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'filler_ratio' --value $fillerratio --unit 'Percentage'
 gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'condor_ratio' --value $jobratio --unit 'Percentage' 
-gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'number_VMs' --value $((counter+1)) --unit 'Percentage' 
+gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'number_VMs' --value $counter --unit 'Percentage' 
+gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'average_runtime_without_basf2' --value $runtime --unit 'minutes' 
+gmetric --cluster 'Belle-servers' --group 'BelleJobs' --type=uint16 --name 'VMs_with_pilots_without_basf2' --value $counter2 --unit 'Amount' 
 
 
