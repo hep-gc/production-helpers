@@ -6,16 +6,14 @@ let fillernumber=0
 let totalnumber=0
 let cpunumber=0
 number=("1" "2" "3")
-
+rm -f /tmp/file*
 
 getnumber()
 {
  local host=$1
  local counter=$2
- ssh -c arcfour -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -n -l root $host 'checkforchild(){ local parameter=$1;local tempvar=$(pgrep -P $1);if [ "$tempvar" != "" ]; then checkforchild $tempvar; else echo $parameter; fi };let runtime=0; let runtime2=0; for i in $(ps axf|grep [c]ondor_starter|cut -d" " -f1); do lastpid=$(checkforchild $i); if [ "$(ps $lastpid|grep -c basf2)" == "0" ]; then let runtime2=$(( $(date +%s) - $(date -d "$(ls -lt /proc/$lastpid|tail -n1|cut -d " " -f 6,7,8)" "+%s") )); if [ $runtime2 -gt $runtime ]; then runtime=$runtime2;fi;fi;done;basf2=$(ps axf|grep -c "[_] basf2");cpus=$(grep processor /proc/cpuinfo -c); condor=$(ps axf|grep -c "[_] condor_starter"); filler=$(count=0;for j in $(find /var/lib/condor/execute/dir_*/ -maxdepth 1 -name DIRAC*);do number=$(grep -c 'exec.py' $(ls -t $j/*.jdl|head -n1));count=$((count+number));done;echo $count);echo $basf2 $filler $condor $cpus $runtime;' 2>/dev/null >/tmp/file$counter
-# basf2=$(ps axf|grep -c "[_] basf2");cpus=$(grep processor /proc/cpuinfo -c); condor=$(ps axf|grep -c "[_] condor_starter");\
-# filler=$(count=0;for j in $(find /var/lib/condor/execute/dir_*/ -maxdepth 1 -name DIRAC*); do number=$(grep -c 'exec.py' $(ls -t $j/*.jdl|head -n1));\
-# count=$((count+number)); done;echo $count); echo $basf2 $filler $condor $cpus $runtime' 2>/dev/null >/tmp/file$counter
+ scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null testVM.sh root@$host:.
+ ssh -c arcfour -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -n -l root $host './testVM.sh' 2>/dev/null >/tmp/file$counter
 }
 
 let counter=0
@@ -38,7 +36,13 @@ do
  if [ "${numberarray[4]}" != "0" ]; then echo runtime4=${numberarray[4]};let runtime=$((runtime+numberarray[4])); counter2=$((counter2+1));fi
 done
  let counter=$((counter+1))
- let runtime=$((runtime/counter2/60))
+ if [ "$counter2" != "0" ];
+ then
+  let runtime=$((runtime/counter2/60))
+ else
+  let runtime=0
+ fi
+
  echo counter2=$counter2
 
 if [ $totalnumber -eq 0 ]; 

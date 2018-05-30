@@ -31,8 +31,12 @@ do
   psarray=($(ps $(pgrep -P $i)|grep condor))
   name=$(dirname ${psarray[5]})
   file=$(ls -1art $name/D*/*.jdl|tail -n 1 )
-  let runtime2=$(( $(date +%s) - $(gettime $file) ))
-  echo time=$runtime2
+  if [ -e $file ];
+  then
+   let runtime2=$(( $(date +%s) - $(gettime $file) ))
+  else
+   runtime2=0
+  fi
   if [ $runtime2 -gt $runtime ];
   then
     runtime=$runtime2;

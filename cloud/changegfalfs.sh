@@ -182,39 +182,39 @@ while read IPs
 do
  case $action in
   mount)
-    gfal_mount $IPs 1
+    gfal_mount $IPs 1 2>/dev/null
     echo $IPs checked, amount=$amount
     ;;
   unmount)
-    gfal_unmount $IPs 1
+    gfal_unmount $IPs 1 2>/dev/null
     echo $IPs checked, amount=$amount
     ;;
   use)
-    gfal_use $IPs 1
+    gfal_use $IPs 1 2>/dev/null
     echo $IPs checked, amount=$amount
     ;;
   unuse)
-    gfal_unuse $IPs 1
+    gfal_unuse $IPs 1 2>/dev/null
     echo $IPs checked, amount=$amount
     ;;
   onthefly)
-    gfal_onthefly $IPs 1
+    gfal_onthefly $IPs 1 2>/dev/null
     echo $IPs checked, amount=$amount
     ;;
   notonthefly)
-    gfal_notonthefly $IPs 1
+    gfal_notonthefly $IPs 1 2>/dev/null
     echo $IPs checked, amount=$amount
     ;;
   enable)
-    gfal_enable $IPs
+    gfal_enable $IPs 2>/dev/null
     echo $IPs checked, amount=$amount
     ;;
   disable)
-    gfal_disable $IPs
+    gfal_disable $IPs 2>/dev/null
     echo $IPs checked, amount=$amount
     ;;
   check)
-    gfal_check $IPs
+    gfal_check $IPs 2>/dev/null
     ;;
  esac
  if [ $amount -eq $quantity ];
