@@ -6,3 +6,6 @@ Where the start/end IPs are in integer format.
 
 Using MariaDB, with an existing database created, load in the sql file:
 mysql <database_name> < create-geoip.sql
+Query this database with an IP address:
+select * from <database_name> where start_ip <= ip_int and end_ip >= ip_int;
+Where ip_int is the IP address in integer format.
