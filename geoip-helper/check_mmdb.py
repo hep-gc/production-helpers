@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+import sys
 import geoip2.database
 
-ip = '2001:4860:4860::8888'
+ip = sys.argv[1] #'2001:4860:4860::8888'
 with geoip2.database.Reader('./dbip-city-lite-2021-05.mmdb') as reader:
     response = reader.city(ip)
 

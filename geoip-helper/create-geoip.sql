@@ -12,8 +12,7 @@ create table geoip (
 	city varchar(255), 
 	region varchar(255), 
 	latitude double not null, 
-	longitude double not null,
-	primary key (start_ip, end_ip)
+	longitude double not null
 );
 
 load data local infile '/root/production-helpers/geoip-helper/geoip_db.csv'
