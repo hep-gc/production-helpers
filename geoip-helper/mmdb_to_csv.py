@@ -4,11 +4,12 @@ Original file is located at
     https://colab.research.google.com/drive/10OqsF-HPQ3ZltsV-DZ868bWJ49ceUPa5
 """
 
-path = "/root/heprc/production-helpers/geoip-helper/"
+path = "./"
 
 import maxminddb
 import copy
 import pandas as pd
+import sys
 
 from ipaddress import IPv4Network, IPv6Network
 
@@ -60,9 +61,9 @@ def iterable(self):
 
 """Input the file name"""
 
-input_file = 'dbip.mmdb'
+input_file = sys.argv[1]
 
-output_file = 'test.csv'
+output_file = 'out.csv'
 
 counter=0
 write_header = True
