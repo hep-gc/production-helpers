@@ -48,6 +48,7 @@ class Geodata:
         self.continent = Continent(data['continent'], data['continent_code'])
         self.location = Location(data['latitude'], data['longitude'])
         self.subdivisions = Subdivisions(data['region'])
+        self.postal = Postal()
 
 class City:
     def __init__(self, name):
@@ -64,16 +65,21 @@ class Continent:
         self.code = code
 
 class Location:
-    def __init__(self, lat, long):
+    def __init__(self, lat, long, time_zone=None, metro_code=None):
         self.latitude = lat
         self.longitude = long
-        self.time_zone = ""
+        self.time_zone = time_zone
+        self.metro_code = metro_code
 
 class Subdivisions:
     def __init__(self, sub):
         self.most_specific = Subdivision(sub)
 
 class Subdivision:
-    def __init__(self, name):
+    def __init__(self, name, code=None):
         self.name = name
-        self.iso_code = ""
+        self.iso_code = code
+
+class Postal:
+    def __init__(self, code=None):
+        self.code = code
