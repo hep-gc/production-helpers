@@ -67,6 +67,7 @@ class Location:
     def __init__(self, lat, long):
         self.latitude = lat
         self.longitude = long
+        self.time_zone = ""
 
 class Subdivisions:
     def __init__(self, sub):
