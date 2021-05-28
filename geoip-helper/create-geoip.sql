@@ -12,8 +12,10 @@ create table ipv4 (
 	region varchar(255), 
 	latitude double not null, 
 	longitude double not null
-);
-alter table ipv4 engine = MyISAM;
+)
+character set 'utf8'
+collate 'utf8_unicode_ci'
+engine = MyISAM;
 
 load data local infile './ipv4.csv'
 into table ipv4
@@ -36,8 +38,10 @@ create table ipv6 (
 	latitude double not null, 
 	longitude double not null,
 	primary key (start_ip, end_ip)
-);
-alter table ipv6 engine = MyISAM;
+)
+character set 'utf8'
+collate 'utf8_unicode_ci'
+engine = MyISAM;
 
 load data local infile './ipv6.csv'
 into table ipv6

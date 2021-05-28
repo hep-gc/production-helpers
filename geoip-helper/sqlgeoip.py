@@ -70,4 +70,9 @@ class Location:
 
 class Subdivisions:
     def __init__(self, sub):
-        self.most_specific = sub
+        self.most_specific = Subdivision(sub)
+
+class Subdivision:
+    def __init__(self, name):
+        self.name = name
+        self.iso_code = ""
