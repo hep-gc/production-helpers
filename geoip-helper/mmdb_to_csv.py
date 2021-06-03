@@ -90,9 +90,9 @@ with maxminddb.open_database(path + input_file) as reader:
   rows = []
   count = 0
   for node in iterable(reader):
-    if count >= 10:
-      break
-    count += 1
+    #if count >= 10:
+      #break
+    #count += 1
 
     row = copy.deepcopy(row_format)
     
@@ -132,13 +132,12 @@ with maxminddb.open_database(path + input_file) as reader:
 
     if 'location' in d:
       if 'latitude' in d['location']:
-        row['latitude'] = d['location']['latitude']
+        lat = d['location']['latitude']
+        row['latitude'] = round(lat, 5)
 
       if 'longitude' in d['location']:
-        row['longitude'] = d['location']['longitude']
-
-    if 'longitude' in d:
-      row['longitude'] = d['longitude']
+        lon = d['location']['longitude']
+        row['longitude'] = round(lon, 5)
 
     row['hash'] = hash(row['city']+str(row['latitude'])+str(row['longitude']))
     
@@ -147,7 +146,7 @@ with maxminddb.open_database(path + input_file) as reader:
     
     if counter % 10000 == 0:
       # Iterate through sorted list of row dicts, compare side-by-side entries, combine when possible
-      rows.sort(key=lambda i: i['start_ip'])
+      rows.sort(key=lambda k: k['start_ip'])
       length = len(rows)
       i = 0
       while i < length-1:
@@ -176,7 +175,7 @@ with maxminddb.open_database(path + input_file) as reader:
       print('.')
     
 # Ouput final list of rows
-rows.sort(key=lambda i: i['start_ip'])
+rows.sort(key=lambda k: k['start_ip'])
 length = len(rows)
 i = 0
 while i < length-1:
