@@ -1,6 +1,8 @@
 drop table if exists ipv4;
 drop table if exists ipv6;
 
+alter database test_db character set utf8mb4 collate utf8mb4_unicode_ci;
+
 create table ipv4 (
 	start_ip int unsigned  not null, 
 	end_ip int unsigned not null, 
@@ -14,7 +16,7 @@ create table ipv4 (
 	longitude double(8,5) not null
 )
 character set 'utf8mb4'
-collate 'utf8mb4_general_ci'
+collate 'utf8mb4_unicode_ci'
 engine = MyISAM;
 
 load data local infile './ipv4.csv'
@@ -39,7 +41,7 @@ create table ipv6 (
 	longitude double(8,5) not null
 )
 character set 'utf8mb4'
-collate 'utf8mb4_general_ci'
+collate 'utf8mb4_unicode_ci'
 engine = MyISAM;
 
 load data local infile './ipv6.csv'
