@@ -8,7 +8,7 @@ mydb = mysql.connector.connect(
    host="localhost",
    user="root",
    password="",
-   database="test_db"
+   database="geoip"
 )
 
 address = ipaddress.ip_address(sys.argv[1])

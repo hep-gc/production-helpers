@@ -1,7 +1,7 @@
 drop table if exists ipv4;
 drop table if exists ipv6;
 
-alter database test_db character set utf8mb4 collate utf8mb4_unicode_ci;
+alter database geoip character set utf8mb4 collate utf8mb4_unicode_ci;
 
 create table ipv4 (
 	start_ip int unsigned  not null, 
