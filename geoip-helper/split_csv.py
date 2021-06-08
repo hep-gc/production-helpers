@@ -7,6 +7,7 @@ filename = sys.argv[1]
 df = pd.read_csv(filename, chunksize=10000)
 
 write_header = True
+counter = 0
 
 for chunk in df:
    ipv4_rows = []
@@ -16,7 +17,12 @@ for chunk in df:
          ipv4_rows.append(row)
       else:
          ipv6_rows.append(row)
-   pd.DataFrame(ipv4_rows).to_csv('./ipv4.csv', mode='a', header=write_header, index=False)
-   pd.DataFrame(ipv6_rows).to_csv('./ipv6.csv', mode='a', header=write_header, index=False)
+   pd.DataFrame(ipv4_rows).to_csv('ipv4.csv', mode='a', header=write_header, index=False)
+   pd.DataFrame(ipv6_rows).to_csv('ipv6.csv', mode='a', header=write_header, index=False)
    write_header = False
-   print('.', end='')
+
+   counter += 1
+   if counter % 100 == 0:
+      print('.')
+   else:
+      print('.', end ='')

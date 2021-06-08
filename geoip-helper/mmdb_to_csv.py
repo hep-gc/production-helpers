@@ -1,10 +1,8 @@
-#!/usr/bin/env/ python3
+#!/usr/bin/env python3
 """
 Original file is located at
     https://colab.research.google.com/drive/10OqsF-HPQ3ZltsV-DZ868bWJ49ceUPa5
 """
-
-path = "./"
 
 import maxminddb
 import copy
@@ -63,7 +61,7 @@ def iterable(self):
 
 input_file = sys.argv[1]
 
-output_file = 'out.csv'
+out_file = 'geoip_db.csv'
 
 counter=0
 write_header = True
@@ -83,14 +81,12 @@ row_format = {
   'hash': "",
 }
 
-out_file = path + output_file
-
-with maxminddb.open_database(path + input_file) as reader:
+with maxminddb.open_database(input_file) as reader:
 
   rows = []
   count = 0
   for node in iterable(reader):
-    #if count >= 10:
+    #if count >= 20:
       #break
     #count += 1
 
