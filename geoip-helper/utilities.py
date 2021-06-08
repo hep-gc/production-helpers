@@ -11,7 +11,7 @@ from urllib.request import urlretrieve
 import requests
 import pygeoip
 import geoip2.database
-import sqlgeoip
+import shoal_server.sqlgeoip as sqlgeoip
 import web
 
 import socket
