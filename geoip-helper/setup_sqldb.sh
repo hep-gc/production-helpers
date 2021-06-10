@@ -1,7 +1,6 @@
 #!/bin/bash
 
-curl "https://download.db-ip.com/free/dbip-city-lite-2021-05.mmdb.gz" | gunzip > city.mmdb
-#curl "https://download.db-ip.com/free/dbip-city-lite-2021-05.mmdb.gz" | tac | tac | gunzip | ./mmdb_to_csv.py
+curl "https://download.db-ip.com/free/dbip-city-lite-2021-06.mmdb.gz" | gunzip > city.mmdb
 echo "Database download complete"
 
 echo "Converting mmdb to csv..."
