@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Original file is located at
-    https://colab.research.google.com/drive/10OqsF-HPQ3ZltsV-DZ868bWJ49ceUPa5
+Convert a mmdb file into two csv files: ipv4.csv and ipv6.csv
 """
 
 import maxminddb
@@ -11,6 +10,10 @@ import sys
 
 from ipaddress import IPv4Network, IPv6Network
 
+"""Input the file name"""
+input_file = sys.argv[1]
+out_ipv4 = 'ipv4.csv'
+out_ipv6 = 'ipv6.csv'
 
 def iterable(self):
     
@@ -57,19 +60,36 @@ def iterable(self):
             elif next_node < self._metadata.node_count:
                 search_nodes.append((next_node, subnet))
 
-"""Input the file name"""
 
-input_file = sys.argv[1]
-
-out_file = 'geoip_db.csv'
+def combine_rows(rows):
+  """ Iterate through sorted list of row dicts, compare side-by-side entries, combine when possible """
+  rows.sort(key=lambda k: k['start_ip'])
+  length = len(rows)
+  i = 0
+  while i < length-1:
+    if rows[i]['hash'] == rows[i+1]['hash']:
+      if rows[i]['end_ip']+1 == rows[i+1]['start_ip']:
+        rows[i]['end_ip'] = rows[i+1]['end_ip']
+        rows.remove(rows[i+1])
+        length = len(rows)
+      elif rows[i]['start_ip']-1 == rows[i+1]['end_ip']:
+        rows[i]['start_ip'] = rows[i+1]['start_ip']
+        rows.remove(rows[i+1])
+        length = len(rows)
+      else:
+        i = i + 1
+    else:
+      i = i + 1
+  for row in rows:
+    del row['hash']
 
 counter=0
 write_header = True
 
 # Change: removed 'range', 'region_code', 'location_accuracy_radius', and added 'start_ip', 'end_ip'
 row_format = {
-  'start_ip': "",
-  'end_ip': "",
+  'start_ip': None,
+  'end_ip': None,
   'continent_code': "",
   'continent': "",
   'country_code': "",
@@ -83,7 +103,8 @@ row_format = {
 
 with maxminddb.open_database(input_file) as reader:
 
-  rows = []
+  ipv4_rows = []
+  ipv6_rows = []
   count = 0
   for node in iterable(reader):
     #if count >= 20:
@@ -118,8 +139,6 @@ with maxminddb.open_database(input_file) as reader:
       if 'names' in d['city']:
           if 'en' in d['city']['names']:
             row['city'] = d['city']['names']['en']
-
-            
     
     if 'subdivisions' in d:
       if 'names' in d['subdivisions'][0]:
@@ -138,58 +157,28 @@ with maxminddb.open_database(input_file) as reader:
     row['hash'] = hash(row['city']+str(row['latitude'])+str(row['longitude']))
     
     counter += 1
-    rows.append(row)
+    if row['start_ip'] < 2**32:
+      ipv4_rows.append(row)
+    else:
+      ipv6_rows.append(row)
     
     if counter % 10000 == 0:
-      # Iterate through sorted list of row dicts, compare side-by-side entries, combine when possible
-      rows.sort(key=lambda k: k['start_ip'])
-      length = len(rows)
-      i = 0
-      while i < length-1:
-        if rows[i]['hash'] == rows[i+1]['hash']:
-          if rows[i]['end_ip']+1 == rows[i+1]['start_ip']:
-            rows[i]['end_ip'] = rows[i+1]['end_ip']
-            rows.remove(rows[i+1])
-            length = len(rows)
-          elif rows[i]['start_ip']-1 == rows[i+1]['end_ip']:
-            rows[i]['start_ip'] = rows[i+1]['start_ip']
-            rows.remove(rows[i+1])
-            length = len(rows)
-          else:
-            i = i + 1
-        else:
-          i = i + 1
-      for row in rows:
-        del row['hash']
+      combine_rows(ipv4_rows)
+      combine_rows(ipv6_rows)
 
-      pd.DataFrame(rows).to_csv(out_file, mode='a', header=write_header, index=False)
+      pd.DataFrame(ipv4_rows).to_csv(out_ipv4, mode='a', header=write_header, index=False)
+      pd.DataFrame(ipv6_rows).to_csv(out_ipv6, mode='a', header=write_header, index=False)
       write_header = False
-      rows = []
+      ipv4_rows = []
+      ipv6_rows = []
       print('.',end='')
     
     if counter % 1000000 == 0:
       print('.')
     
 # Ouput final list of rows
-rows.sort(key=lambda k: k['start_ip'])
-length = len(rows)
-i = 0
-while i < length-1:
-  if rows[i]['hash'] == rows[i+1]['hash']:
-    if rows[i]['end_ip']+1 == rows[i+1]['start_ip']:
-      rows[i]['end_ip'] = rows[i+1]['end_ip']
-      rows.remove(rows[i+1])
-      length = len(rows)
-    elif rows[i]['start_ip']-1 == rows[i+1]['end_ip']:
-      rows[i]['start_ip'] = rows[i+1]['start_ip']
-      rows.remove(rows[i+1])
-      length = len(rows)
-    else:
-      i = i + 1
-  else:
-    i = i + 1
-for row in rows:
-  del row['hash']
+combine_rows(ipv4_rows)
+combine_rows(ipv6_rows)
 
-pd.DataFrame(rows).to_csv(out_file, mode='a', header=False, index=False)
-
+pd.DataFrame(ipv4_rows).to_csv(out_ipv4, mode='a', header=False, index=False)
+pd.DataFrame(ipv6_rows).to_csv(out_ipv6, mode='a', header=False, index=False)
