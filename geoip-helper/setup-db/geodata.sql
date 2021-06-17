@@ -19,7 +19,7 @@ character set 'utf8mb4'
 collate 'utf8mb4_unicode_ci'
 engine = MyISAM;
 
-load data local infile './ipv4.csv'
+load data local infile '/home/centos/production-helpers/geoip-helper/setup-db/ipv4.csv'
 into table ipv4
 fields terminated by ','
 lines terminated by '\n'
@@ -44,7 +44,7 @@ character set 'utf8mb4'
 collate 'utf8mb4_unicode_ci'
 engine = MyISAM;
 
-load data local infile './ipv6.csv'
+load data local infile '/home/centos/production-helpers/geoip-helper/setup-db/ipv6.csv'
 into table ipv6
 character set utf8mb4
 fields terminated by ','

@@ -10,10 +10,11 @@ import sys
 
 from ipaddress import IPv4Network, IPv6Network
 
-"""Input the file name"""
+"""Input the file and path names"""
+path = '/home/centos/production-helpers/geoip-helper/setup-db/'
 input_file = sys.argv[1]
-out_ipv4 = 'ipv4.csv'
-out_ipv6 = 'ipv6.csv'
+out_ipv4 = path + 'ipv4.csv'
+out_ipv6 = path + 'ipv6.csv'
 
 def iterable(self):
     
