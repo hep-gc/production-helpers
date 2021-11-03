@@ -28,7 +28,7 @@ include_once $conf['gweb_root'] . "/get_ganglia.php";
 
 header("Content-Type: text/json");
 
-# Alias `metrics` parameter to `metric`
+# It doesn't matter whether the `metrics` or `metric` parameter is provided, they are the same
 if ( isset($_GET['metric']) ) $_GET['metrics'] = $_GET['metric'];
 
 # Handle list actions
@@ -83,6 +83,6 @@ if ( isset($target) ) {
 	api_return_ok($ret);
 
 # User did not provide appropriate parameters
-} else { api_return_error("You need to supply an action or the cluster, host, metric, start_e, end_e and res."); }
+} else { api_return_error("You need to supply an action or the cluster, host, metric(s), start_e, end_e and res."); }
 
 ?>
