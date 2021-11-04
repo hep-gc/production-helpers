@@ -67,7 +67,7 @@ if ( isset($target) ) {
 		# Check that the user requested a valid metric.
 		if ( ! array_key_exists($metricname, $metrics[$hostname]) ) api_return_error("Invalid metric " . $metricname . " for host " . $hostname);
 
-		$command  = $conf['rrdtool'] . " fetch -a ";
+		$command  = $conf['rrdtool'] . " fetch ";
 		$command .= $conf['rrds'] . "/'$clustername'/$hostname/$metricname.rrd";
 		$command .= " -r $resolution -s $start -e $end AVERAGE" . " 2>&1";
 
