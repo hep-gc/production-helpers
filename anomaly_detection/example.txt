@@ -1,0 +1,15 @@
+# Configuration file for run_analysis.py
+# Fields are TAB separated
+# Comments start with '#'
+
+[config]
+# Key			Value
+monitor_server	http://monitoring.server.ca/ganglia/ # URL of monitoring server
+admin_email		admin@company.ca                     # Email to send anomaly reports to
+detector		pyod.models.iforest.IForest          # pyod.models.iforest.IForest or analyser_deep.AELstmTF2
+max_workers		2                                    # Maximum number of parallel processes to start
+
+[manifest]
+# Cluster			Hostname					Metrics
+cluster1			host1.company.ca			cpu_system,cpu_idle,cpu_user,load_fifteen,mem_free
+cluster1			host2.company.ca			cpu_system,cpu_idle,cpu_user
