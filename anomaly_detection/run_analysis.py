@@ -64,19 +64,19 @@ nwindows   = 3 if today < int(date.today().strftime("%s")) else (now - today) //
 if not os.path.exists('cache') : os.makedirs('cache')
 if not os.path.exists('output'): os.makedirs('output')
 
-def save_model(model, coeffs, filename):
+def save_model(model, train_data, filename):
     """
     Save anomaly detection model and normalization coefficients to a file.
     """
     det_name = model.__class__.__name__
-    if   det_name == "IForest": dump((model, coeffs), filename)
+    if   det_name == "IForest": dump((model, train_data), filename)
     elif det_name == "AELstmTF2":
         # The model (model.model_) is not serializable w/ joblib/pickle, therefore
         # it must be saved seperately from the main detector object.
         model_ = model.model_
         model_.save(filename) # Save model
         del model.model_
-        dump((model, coeffs), filename + "_object") # Save detector
+        dump((model, train_data), filename + "_object") # Save detector
         model.model_ = model_
         
 def load_model(filename):
@@ -85,33 +85,43 @@ def load_model(filename):
     """
     if   det_type[1]  == 'IForest'  : return load(filename)
     elif det_type[1]  == 'AELstmTF2':
-        model, coeffs = load(filename + "_object")
+        model, train_data = load(filename + "_object")
         model.model_ = tf.keras.models.load_model(filename)
-        return model, coeffs
+        return model, train_data
 
-def generate_plot(hostname, metrics, predictions, series):
+def generate_plot(hostname, metrics, predictions, series, tseries):
     """
     Generate a plot for a given host with anomalous windows highlighted.
     """
     # Config
-    fig, axes = plt.subplots(len(metrics), 1, figsize=(14, 7), sharex=True)
+    fig, axes = plt.subplots(len(metrics), 2, figsize=(15, 8), sharey='row', sharex='col')
     fig.suptitle(f'Host: {hostname}', y=0.95)
     plt.subplots_adjust(wspace=0, hspace=0)
+    
+    td = datetime.fromtimestamp(today)
     colors = plt.rcParams["axes.prop_cycle"]()
     
     # Add plots to axes
     for ax, metric in zip(axes, metrics):
-        
-        ax.plot(series.index, list(series[metric]), label=metric, color=next(colors)['color'])
-        ax.legend(loc='upper left')
+        c = next(colors)['color']
+
+        for a in ax:
+            a.margins(x=0)
+            a.xaxis.set_tick_params(rotation=30)
+
+        ax[0].plot(tseries.index, list(tseries[metric]), label=metric, color=c)
+        ax[0].legend(loc='upper left')
+        ax[0].axvspan(tseries.index[0], tseries.index[-1], alpha=0.25, color='skyblue')
+
+        ax[1].plot(series.index, list(series[metric]), label=metric, color=c)
         
         for x in range(86400 // (steps * resolution) + 1):
-            td = datetime.fromtimestamp(today)
-            ax.axvline(x = td + timedelta(hours=8*x, minutes=-5), color = 'magenta', linewidth=1, alpha=0.5)
+            ax[1].axvline(x = td + timedelta(hours=8*x, minutes=-5), color = 'magenta', linewidth=1, alpha=0.5)
             if x < len(predictions) and predictions[x] == 1:
-                ax.axvspan(td + timedelta(hours=8*x, minutes=-5), td + timedelta(hours=8*(x+1), minutes=-5), alpha=0.25, color='red')
+                ax[1].axvspan(td + timedelta(hours=8*x, minutes=-5), td + timedelta(hours=8*(x+1), minutes=-5), alpha=0.25, color='red')
 
-    fig.legend(handles=[mpatches.Patch(color='red', alpha=0.25, label='Anomaly detected.'),
+    fig.legend(handles=[mpatches.Patch(color='skyblue', alpha=0.25, label='Training Period.'),
+                        mpatches.Patch(color='red', alpha=0.25, label='Anomaly detected.'),
                         mpatches.Patch(edgecolor='black', alpha=0.25, label='OK.', fill=False)])
     
     # Save plot & exit
@@ -137,11 +147,10 @@ def handle_host(host):
         host = host[:3]
     
     # Try to load model from cache
-    if hashstr in os.listdir('cache'): detector, coeffs = load_model(f"cache/{hashstr}")
+    if hashstr in os.listdir('cache'): detector, train_data = load_model(f"cache/{hashstr}")
     else:
         # Get training data, get normalization coeffs
         train_data = Data(host, look_behind, today - offset, resolution, API, steps, slide)
-        coeffs = train_data.get_norm_coeffs()
 
         # Initialize model
         
@@ -166,17 +175,17 @@ def handle_host(host):
         else: raise Exception(f"Unsupported detector type {det_type}")
         
         detector.fit(train_data.get_raw())               # Fit model
-        save_model(detector, coeffs, f"cache/{hashstr}") # Save model
+        save_model(detector, train_data, f"cache/{hashstr}") # Save model
     
     # Fetch inference data
-    infer_data = Data(host, today - offset, f's+{8 * nwindows}h', resolution, API, steps, 48, coeffs=coeffs)
+    infer_data = Data(host, today - offset, f's+{8 * nwindows}h', resolution, API, steps, 48, coeffs=train_data.get_norm_coeffs())
     
     # Generate predictions
     infer = infer_data.get_raw()
     predictions = detector.predict(infer)
     
     # Generate plots if there are any anomalous hosts
-    if (not DEBUG) and any(predictions): generate_plot(*host[1:3], predictions, infer_data.get_series())
+    if (not DEBUG) and any(predictions): generate_plot(*host[1:3], predictions, infer_data.get_series(), train_data.get_series())
     
     return (*host[0:2], detector.predict_proba(infer), detector.decision_function(infer), predictions, detector.threshold_)
 
