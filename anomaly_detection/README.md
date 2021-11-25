@@ -38,7 +38,7 @@ Currently the `IForest` detector from the [pyod](https://pyod.readthedocs.io/en/
 
 After the `Metrics` column in the `[manifest]` section of the configuration file, you may add an additional two columns. The first is a unix timestamp that denotes the end of the training interval and the second is the start of the interval. For example, a training period of 2 weeks ending on the 11th of november can be specified as 
 ```
-# Cluster	Hostname		Metrics			Train-end-date	Look-behind
-cluster		host.domain.ca	metric1,metric2	1636617600		e-2wk
+# Cluster	Hostname				Metrics					Train-end-date	Look-behind
+cluster		host.domain.ca	metric1,metric2	1636617600			e-2wk
 ```
 More information on specifying times can be found [here](https://oss.oetiker.ch/rrdtool/doc/rrdfetch.en.html#AT-STYLE_TIME_SPECIFICATION).
