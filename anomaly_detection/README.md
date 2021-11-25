@@ -32,7 +32,7 @@ Next, the script will use the trained model to do a prediction on the current da
 
 ### Compatible models
 
-Currently the `IForest` detector from the [pyod](https://pyod.readthedocs.io/en/latest/) module and `AELstmTF2` from [adcern](https://gitlab.cern.ch/cloud-infrastructure/data-analytics/-/tree/master/adcern) arei explicitly supported. However, any model based on the `BaseDetector` class from PyOD can be made to work.
+Currently the `IForest` detector from the [pyod](https://pyod.readthedocs.io/en/latest/) module and `AELstmTF2` from [adcern](https://gitlab.cern.ch/cloud-infrastructure/data-analytics/-/tree/master/adcern) are explicitly supported. However, any model based on the `BaseDetector` class from PyOD can be made to work.
 
 ### Specifying custom training intervals
 
