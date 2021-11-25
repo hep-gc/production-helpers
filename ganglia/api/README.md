@@ -2,7 +2,7 @@
 
 ## API for requesting data from Ganglia Server
 
-### `request.php`
+### `requestv2.php`
 
 ```
 Place this file in /usr/share/ganglia/dev. This API can be used to request the list
