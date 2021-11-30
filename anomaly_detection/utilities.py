@@ -3,6 +3,7 @@
 # IO
 import io
 import sys
+import ast
 import shlex
 # Hashing
 from hashlib import md5
@@ -39,24 +40,26 @@ def load_config(path):
     """
     Load configuration file / host manifest.
     """
-    config, manifest = {}, []
+    config, manifest, model = {}, [], {}
     with open(path, 'r') as file:
-        mode = 0 # 0 = None, 1 = Manifest, 2 = Config
+        mode = 0 # 0 = None, 1 = Manifest, 2 = Config, 3 = Model
         for line in file.readlines():
             line = shlex.split(line, comments='#')
             # print(line)
             if any(line):
-                if   line == ["[manifest]"]  : mode = 1
-                elif line == ["[config]"]: mode = 2
+                if   line == ["[manifest]"]: mode = 1
+                elif line == ["[config]"]  : mode = 2
+                elif line == ["[model]"]   : mode = 3
                 elif mode == 1:
-                    if len(line) == 3:
-                        manifest.append(line[:-1] + [line[-1].split(',')])
-                    elif len(line) == 5:
-                        manifest.append(line[:2] + [line[2].split(',')] + line[3:])
+                    if   len(line) == 3: manifest.append(line[:-1] + [line[-1].split(',')])
+                    elif len(line) == 5: manifest.append(line[:2] + [line[2].split(',')] + line[3:])
                 elif mode == 2: config[line[0]] = line[1]
+                elif mode == 3:
+                    try:               model[line[0]] = ast.literal_eval(line[1])
+                    except ValueError: model[line[0]] = line[1]
                 else: raise Exception("Unknown value encountered while parsing config file: " + str(line))
     
-    return config, manifest
+    return config, manifest, model
 
 def hash_objects(*args): return md5(''.join(map(str, args)).encode()).hexdigest() # Hash all arguments provided as strings
 

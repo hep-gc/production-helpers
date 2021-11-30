@@ -3,13 +3,33 @@
 # Comments start with '#'
 
 [config]
-# Key			Value
-monitor_server	http://monitoring.server.ca/ganglia/ # URL of monitoring server
-admin_email		admin@company.ca                     # Email to send anomaly reports to
-detector		pyod.models.iforest.IForest          # pyod.models.iforest.IForest or analyser_deep.AELstmTF2
-max_workers		2                                    # Maximum number of parallel processes to start
+# Key		Value
+
+# Required
+monitor_server	http://monitoring.server.ca/ganglia/  # URL of monitoring server
+detector	pyod.models.iforest.IForest           # pyod.models.iforest.IForest or analyser_deep.AELstmTF2
+
+# Optional
+admin_email	admin@company.ca  # Email address to send anomaly reports to. If not specified, silent is set to 1.
+silent		0                 # 1 = No emails are sent, plots stored in output/. 0 = Emails sent, plots are deleted. Set to 0 by default.
+max_workers	2                 # Maximum number of parallel processes to start. Set to 1 by default.
+train_days	7                 # Number of days in training dataset. Set to 7 by default.
+
+[model]
+# nr_timeseries	5    # AELstmTF2
+# nr_timesteps	48
+# epochs	3
+# verbose	0
+# contamination	0.05
+
+n_estimators	300    # IForest
+contamination	0.05
+verbose		1
+max_samples	'auto'
+max_features	1.0
+random_state	3393
 
 [manifest]
-# Cluster			Hostname					Metrics
-cluster1			host1.company.ca			cpu_system,cpu_idle,cpu_user,load_fifteen,mem_free
-cluster1			host2.company.ca			cpu_system,cpu_idle,cpu_user
+# Cluster	Hostname		Metrics
+cluster1	host1.company.ca	cpu_system,cpu_idle,cpu_user,load_fifteen,mem_free
+cluster1	host2.company.ca	cpu_system,cpu_idle,cpu_user
