@@ -10,7 +10,8 @@ if ( isset($_GET['action']) ) {
 	switch ( $_GET['action'] ) {
 		case 'list_grids'   : $context = 'meta'   ; break;
 		case 'list_clusters': $context = 'grid'   ; break;
-		case 'list_hosts'   : $context = 'cluster';
+		case 'list_hosts'   : $context = 'cluster'; break;
+		default:              $context = 'cluster';
 	}
 
 	$target = explode("_", $_GET['action'])[1];
@@ -34,7 +35,14 @@ if ( isset($_GET['metric']) ) $_GET['metrics'] = $_GET['metric'];
 # Handle list actions
 if ( isset($target) ) {
 
-	if ($target == 'hosts') { $ret = array_keys($metrics); }
+	if ($target == 'hosts') {
+                switch (explode("_", $_GET['action'])[2]) {
+                        case 'col': echo implode("\n", array_keys($metrics)) ; exit();
+                        case 'ip' : echo implode("\n", array_map('gethostbyname', array_keys($metrics))) ; exit();
+
+                        default: $ret = array_keys($metrics);
+                }
+        }
 	else {
 		switch ($target) {
 			case 'grids'   : $filter = function ($x) { return array_key_exists('GRID',    $x) && ($x['GRID']    == 1) ; }; break;
