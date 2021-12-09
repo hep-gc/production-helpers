@@ -23,7 +23,7 @@ check_ssh_connections() {
   echo $unknown
 }
 
-SWAP_PERCENT=$(free -t | grep -i swap|awk '{print $3/$2*100}')
+SWAP_PERCENT=$(free -t | grep -i swap|awk '{if ($2 + 0 != 0) {print $3/$2*100} else {print 0}}')
 
 # TYPES: string|int8|uint8|int16|uint16|int32|uint32|float|double
 
