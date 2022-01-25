@@ -13,17 +13,25 @@ scp -P$port gmond.conf monitor.sh $user@$host.$domain:/tmp
 
 # Process config file
 
-awk '/\[PROCESS\]/{flag=1;next}/\[COMMAND\]/{flag=0}flag' configurations/$domain/$host.cfg | ssh -p$port $user@$host.$domain "cat > /tmp/$host.cfg"
+awk '/\[PROCESS\]/{flag=1;next}/\[COMMAND\]/{flag=0}flag' configurations/$domain/$host.cfg | ssh -p$port $user@$host.$domain "cat > /tmp/host.cfg"
 
 # Run installation
 
-ssh -tt -p$port $user@$host.$domain "sudo yum -y install epel-release; sudo yum -y install ganglia-gmond ganglia-gmond-python; sudo mv /tmp/gmond.conf /tmp/monitor.sh /tmp/host.cfg /etc/ganglia; sudo chmod +x /etc/ganglia/monitor.sh; echo \"echo '*/5 * * * * root /bin/sh /etc/ganglia/monitor.sh' > /etc/cron.d/ganglia\"|sudo bash; sudo service gmond restart gmond; sudo systemctl enable gmond; sudo /etc/ganglia/monitor.sh &>/dev/null;"
+ssh -tt -p$port $user@$host.$domain "\
+  sudo yum -y install epel-release;\
+  sudo yum -y install ganglia-gmond ganglia-gmond-python;\
+  sudo mv /tmp/gmond.conf /tmp/monitor.sh /tmp/host.cfg /etc/ganglia;\
+  sudo chmod +x /etc/ganglia/monitor.sh;\
+  echo \"echo '*/5 * * * * root /bin/sh /etc/ganglia/monitor.sh' > /etc/cron.d/ganglia\"|sudo bash; \
+  sudo service gmond restart gmond; \
+  sudo systemctl enable gmond;\
+  sudo /etc/ganglia/monitor.sh &>/dev/null;"
 
 # Send config file to nagios server
 
-r_ip=?   # Replace "?" with ip of nagios server
-r_user=? # Replace "?" with username on nagios server
-r_port=22
+r_ip=206.12.154.221   # Replace "?" with ip of nagios server
+r_user=root # Replace "?" with username on nagios server
+r_port=3121
 
 rsync -crpz -e "ssh -p$r_port" configurations $r_user@$r_ip:/etc/nagios
 
