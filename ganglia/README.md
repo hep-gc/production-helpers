@@ -13,3 +13,7 @@ PHP scripts that extend the ganglia web server.
 ### deploy
 
 Scripts for deploying ganglia monitoring to a CentOS host.
+
+### documentation
+
+Guides for setting up a monitoring server and host management, as well as files and scripts for Nagios server.

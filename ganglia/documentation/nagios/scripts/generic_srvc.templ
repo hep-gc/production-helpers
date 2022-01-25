@@ -1,0 +1,8 @@
+define service {
+        use             ganglia-service
+	name            {{HOSTNAME}}-{{METRIC}}
+	description	{{DESCRIPTION}}
+	check_command   check_ganglia_metric!{{ARGSTR}}
+	host_name	{{HOSTNAME}}
+}
+
