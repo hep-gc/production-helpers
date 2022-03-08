@@ -8,13 +8,22 @@ ssh_whitelist=( 'uvic.ca' )
 # Commands to gather metrics
 
 proc_verify() {
-        if [ $(ps axf|grep -c "$1") -gt 1 ];then echo "True"
-        else                                  echo "False" ; fi
+        if [ $(ps axf|grep -c "$1") -lt 2 ];
+        then
+          sleep 5;
+        fi
+        if [ $(ps axf|grep -c "$1") -gt 1 ]; 
+        then
+           echo "True"
+        else
+           echo "False"
+        fi
 }
 
 
 check_ssh_connections() {
-  unknown=0
+  local unknown=0
+  local hostname=""
   for host in $(last -w | grep "still logged in" | awk '{print $3}' | uniq); 
   do
       hostname=$(getent hosts $host | awk '{print tolower($2)}')
@@ -36,4 +45,4 @@ while read proc ; do
     gmetric -n $proc'_service_running' -v $(proc_verify $proc) -t 'string' -u '' -d $METRIC_TTL
   fi
 done < $PROC_CFG
-                          
+                         
