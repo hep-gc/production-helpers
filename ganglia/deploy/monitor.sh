@@ -26,7 +26,7 @@ check_ssh_connections() {
   local hostname=""
   for host in $(last -w | grep "still logged in" | awk '{print $3}' | uniq); 
   do
-      hostname=$(getent hosts $host | awk '{print tolower($2)}')
+      hostname=$(getent hosts $host)
       [[ $hostname =~ ^.*($ssh_whitelist)$ ]] || unknown=$((unknown+1))
   done
   echo $unknown
