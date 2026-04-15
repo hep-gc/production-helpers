@@ -5,14 +5,20 @@ import csv
 import numpy as np
 import datetime
 
-#host path
-host_path = "rrds/BaBar/babar10.babar.uvic.ca"
-
-#step resoltion timeframes
 YEAR = "2"
 BIWEEK = "1"
 DAY = "0"
 
+#-------------------VARIABLES---------------------
+#-------------------------------------------------
+#host path
+host_path = r"rrds/Belle-II RDC/xrd5.belle.uvic.ca/"
+
+#resolution
+res = YEAR
+
+#------------------------------------------------
+#------------------------------------------------
 dfs = []
 starts = []
 ends = []
@@ -21,15 +27,15 @@ ends = []
 for file in os.listdir(host_path):
     file_path = os.path.join(host_path, file)
     info = rrdtool.info(file_path)
-    starts.append(rrdtool.first([file_path, "--rraindex", YEAR]))
+    starts.append(rrdtool.first([file_path, "--rraindex", res]))
     ends.append(rrdtool.last(file_path))
 
 start_time = max(starts)
 end_time = max(ends)
-#print(f"chosen start: {datetime.datetime.fromtimestamp(start_time)}")
-#print(f"chosen end: {datetime.datetime.fromtimestamp(end_time)}")
+print(f"chosen start: {datetime.datetime.fromtimestamp(start_time)}")
+print(f"chosen end: {datetime.datetime.fromtimestamp(end_time)}")
 
-trues = []
+#trues = []
 #import data from each file in host
 for file in os.listdir(host_path):
     file_path = os.path.join(host_path, file)
@@ -80,22 +86,23 @@ print(missing_per_column[missing_per_column > 0])
 missing_per_row = df.isna().sum(axis=1)
 print(missing_per_row[missing_per_row > 0])
 
-df = df.dropna() #around 132 missing values, one row with 109  missing values, another 4/5 with one or two values missing, deleted them
+df = df.dropna() 
 
-#fill missing values
-#df.ffill(inplace=True)
-#df.bfill(inplace=True)
 
 print(f"any value missing? {df.isna().any().any()}")
 print(f"total missing vals: {df.isna().sum().sum()}")
 
 #check dataframe in order
 print(df.index.is_monotonic_increasing)
-#print(df.head(50))
+print(df.head(50))
 
+#get rid of unknown ssh connections, boottime, storage refer size, compress ratio, part max use
+df = df.drop(columns=['boottime', 'part_max_used'])
+#df = df.drop(columns=['Unknown_SSH_Connections', 'boottime', 'storage refer size', 'storage-RDC compress ratio', 'part_max_used'])
+
+print(df.head(50))
 #save into csv
-df.to_csv("raw_yearly_metrics.csv")
+df.to_csv("raw_year_features_belle.csv")
 
 exit()
-
 
