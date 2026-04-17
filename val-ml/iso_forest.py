@@ -28,7 +28,7 @@ def load_data(csv):
 
 #clean data
 def clean_data(df):
-    #df = np.log1p(df)
+    df = np.log1p(df)
     low_var_cols = df.columns[df.std() < 0.007]
     print(low_var_cols)
     df = df.drop(columns=low_var_cols)
@@ -140,7 +140,10 @@ iso.fit(df_train_scaled)
 scores = iso.decision_function(df_test_scaled)
 df_test_scaled['anomaly_score'] = scores
 
-threshold = np.percentile(df_test_scaled['anomaly_score'], 0.1)
+#print(df_test_scaled.describe().transpose())
+print(df_test_scaled.sort_values('anomaly_score').head(50))
+exit()
+threshold = np.percentile(df_test_scaled['anomaly_score'], 1)
 
 extreme_anomalies = df_test_scaled[df_test_scaled['anomaly_score'] < threshold]
 

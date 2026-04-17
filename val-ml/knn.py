@@ -97,8 +97,8 @@ df = df.drop(columns=['storage free size','storage refer size','enclosure free s
 df = clean_data(df)
 
 # Split
-df_test = df['2026-01-21':]
-df_train  = df[:'2026-01-20']
+df_test = df['2025-12-02':'2026-01-01':]
+df_train  = df['2025-10-01':'2025-12-01']
 
 print("OVERVIEW  DATAFRAME:\n")
 print(df.describe().transpose())
