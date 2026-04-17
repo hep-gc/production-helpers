@@ -102,7 +102,6 @@ df_test = df['2026-01-21':]
 df_train  = df[:'2026-01-20']
 
 #scale
-# Get max from train
 train_max = df_train.max()
 
 # Scale train and test to 0-1
@@ -142,12 +141,3 @@ df_test_scaled['anomaly_score'] = scores
 
 #print(df_test_scaled.describe().transpose())
 print(df_test_scaled.sort_values('anomaly_score').head(50))
-exit()
-threshold = np.percentile(df_test_scaled['anomaly_score'], 1)
-
-extreme_anomalies = df_test_scaled[df_test_scaled['anomaly_score'] < threshold]
-
-extreme_anomalies = extreme_anomalies.drop(columns=['anomaly_score'])
-print("Num anomalies:", len(extreme_anomalies))
-
-print(extreme_anomalies)

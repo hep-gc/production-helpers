@@ -130,6 +130,7 @@ print("Train stats:", df_train_scaled.values.min(), df_train_scaled.values.max()
 print("Test stats:", df_test_scaled.values.min(), df_test_scaled.values.max())
 
 #---------------KNN---------------------------
+
 # --- kNN ---
 nbrs = NearestNeighbors(n_neighbors=k)
 nbrs.fit(df_train_scaled)
