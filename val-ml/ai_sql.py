@@ -10,10 +10,10 @@ from langchain_community.utilities.sql_database import SQLDatabase
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 
 # -------------------- db connection --------------------
-DB_USER="CHANGE-ME"
-DB_HOST="CHANGE-ME"
-DB_PASS="CHANGE-ME"
-DB_NAME="CHANGE-ME"
+DB_USER="CHANGE"
+DB_HOST="CHANGE"
+DB_PASS="CHANGE"
+DB_NAME="CHANGE"
 db = SQLDatabase.from_uri(f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:3306/{DB_NAME}")
 
 
