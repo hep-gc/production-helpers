@@ -194,9 +194,6 @@ def main():
     except KeyboardInterrupt:
          print("\nExiting program")
 
-from IPython.display import Image, display
-from langchain_core.runnables.graph import CurveStyle, MermaidDrawMethod, NodeStyles
-
 if __name__ == "__main__":
 
     display(Image(agent.get_graph().draw_mermaid_png()))

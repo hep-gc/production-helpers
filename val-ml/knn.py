@@ -10,36 +10,66 @@ import torch.optim as optim
 import math
 from sklearn.neighbors import NearestNeighbors
 
-#to display all columns or rows
+#---------- Variables ----------
+# Input CSV file
+csv = 'raw_year_features_belle.csv'
+
+# Number of neighbors for kNN
+k = 5
+
+#path to save plots
+fig_path = 'ml'
+#-------------------------------
+
+#Configure pandas to display all rows and columns
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
 
-#---------- Variables ----------
-csv = 'raw_year_features_belle.csv'
-k = 5
 match = re.search(r"raw_year_features_(.+)\.csv", csv)
 
 if match:
     vm = match.group(1)
-#-------------------------------
 
 #load data
 def load_data(csv):
+    """
+    Load dataset from CSV file.
+
+    Args:
+        csv (str): Path to CSV file.
+
+    Returns:
+        pd.DataFrame: DataFrame.
+    """
     return pd.read_csv(csv, index_col="Datetime", parse_dates=True)
 
 #clean data
 def clean_data(df):
+    """
+    Apply preprocessing steps:
+    - Log transformation
+    - Remove low-variance features
+
+    Args:
+        df (pd.DataFrame): DataFrame.
+
+    Returns:
+        pd.DataFrame: DataFrame.
+    """
     df = np.log1p(df)
     low_var_cols = df.columns[df.std() < 0.007]
-    print(low_var_cols)
+    #print(low_var_cols)
     df = df.drop(columns=low_var_cols)
     return df
     
-def get_change(df, stds):
-    return df
 
 def plot_features(df):
+    """
+    Generate scatter plots for all features over time.
 
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+    """
     cols_per_fig = int(df.shape[0]/2)
     total_cols = int(df.shape[1])
 
@@ -64,13 +94,20 @@ def plot_features(df):
         plt.tight_layout(rect=[0, 0, 1, 0.95])
 
         # Save figure
-        filename = f"ml/features_{vm}_{i+1}_to_{i+chunk.shape[1]-1}.png"
+        filename = f"{fig_path}/features_{vm}_{i+1}_to_{i+chunk.shape[1]-1}.png"
         plt.savefig(filename, dpi=300)
         print(f"plot {filename} saved")
         plt.close()
 
 def plot_single_column(df, column, end_index):
-    # subset the datta
+    """
+    Plot a single feature over time up to a given index.
+
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        column (str): Feature to plot.
+        end_index (datetime)
+    """
     df_plot = df.loc[:end_index, column]
 
     # Plot
@@ -81,19 +118,15 @@ def plot_single_column(df, column, end_index):
     plt.tight_layout()
 
     # Save figure
-    filename = f"ml/plot_{column}_{end_index}.png"
+    filename = f"{fig_path}/plot_{column}_{end_index}.png"
     plt.savefig(filename, dpi=300)
     print(f"Plot saved: {filename}")
     plt.close()
 
-
-#plot_features(df)
-#plot_single_column(df, 'storage pool read BW', "2025-09-17")
-
 #----PREPARE DATA------
+
 df= load_data(csv)
 df = df.drop(columns=['storage free size','storage refer size','enclosure free size','storage-RDC refer size','load_five','load_fifteen','enclosure refer size','Unknown_SSH_Connections','pkts_in','pkts_out','enclosure pool IOPS read','enclosure pool IOPS write','storage pool IOPS write','storage pool IOPS read','storage-RDC free size'])
-
 df = clean_data(df)
 
 # Split
@@ -105,12 +138,8 @@ print(df.describe().transpose())
 print("\n")
 
 
-#scale Min-Max
-# Get max from train
+#scaling 
 train_max = df_train.max()
-
-#print(f"train max: {train_max}\n")
-# Scale train and test to 0-1 using training statistics
 df_train_scaled = (df_train) / train_max
 df_test_scaled = (df_test) / train_max
 
@@ -118,35 +147,39 @@ df_test_scaled = (df_test) / train_max
 #df_test_scaled = df_test
 
 
-#print("OVERVIEW TRAIN AND TEST DATAFRAME:\n")
-#print("train\n")
-#print(df_train.describe().transpose())
-#print("\n")
-#print("test\n")
-#print(df_test.describe().transpose())
-#print("\n")
+print("OVERVIEW TRAIN AND TEST DATAFRAME:\n")
+print("train\n")
+print(df_train.describe().transpose())
+print("\n")
+print("test\n")
+print(df_test.describe().transpose())
+print("\n")
 
 print("Train stats:", df_train_scaled.values.min(), df_train_scaled.values.max())
 print("Test stats:", df_test_scaled.values.min(), df_test_scaled.values.max())
 
-#---------------KNN---------------------------
+#==========================================
 
 # --- kNN ---
 nbrs = NearestNeighbors(n_neighbors=k)
+
+#fit model on training data
 nbrs.fit(df_train_scaled)
 
+#compute distances to k nearest neighbors
 distances, indices = nbrs.kneighbors(df_train_scaled)
 
 scores = distances[:, -1]
 
-# --- threshold ---
+#treshold for anomaly detection
 threshold = scores.mean() + 3 * scores.std()
 labels = np.where(scores > threshold, -1, 1)
 
+#count anomalies
 num_anomalies = np.sum(labels == -1)
 print("Num anomalies:", num_anomalies)
 
-# --- store results ---
+#store results + analysis
 df_train = df_train.copy()
 df_train["anomaly_score"] = scores
 df_train["anomaly_label"] = labels
@@ -167,6 +200,7 @@ anomaly_indices = np.where(labels == -1)[0]
 
 print("\nTop contributing features PER anomaly:\n")
 
+#feature-wise contribution for top anomalies
 for idx in anomaly_indices[:10]:
     
     timestamp = df_train.index[idx]

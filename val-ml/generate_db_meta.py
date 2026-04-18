@@ -4,11 +4,11 @@ from typing import Dict, List
 import rrdtool
 from langchain_core.tools import tool
 
-#==============VARIABLES==========================
+#-----------VARIABLES-----------------
 DB_PATH = Path("/home/almalinux/rrds")
 
 
-# -------------------- create metadata ---------------------------
+#CREATE METADATA
 class MetricMeta(BaseModel):
     rrd_path: Path
     
@@ -25,7 +25,13 @@ class MetadataRegistry(BaseModel):
 
 def create_registry():
     """
-    returns a registry of the contents of the db for later data analysis
+    created a registry of the contents of an rrdtool db for LLM retrival.
+    
+    Args: 
+        None
+    
+    Returns: 
+        MetadataRegistry object
     """
     #1. get the clusters
     #2. for each cluster get host list

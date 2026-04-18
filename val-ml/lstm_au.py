@@ -9,38 +9,70 @@ import torch.utils.data as data
 import torch.optim as optim
 import math
 
+#---------- VARIABLES ----------
+#input dataset
+csv = 'raw_year_features_belle.csv'
+
+#path to save plots
+fig_path = 'ml'
+
+
+lookback = 1 #sequence lenght for LSTM input
+
+#model hyperparameters
+layers = 1
+hidden_s = 100 #hidden state
+latent_s= 50 #latent state
+
+#training epochs
+n_epochs = 75
+#--------------------------------
+
 #to display all columns or rows
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
 
-#---------- VARIABLES ----------
-#-------------------------------
-csv = 'raw_year_features_belle.csv'
-lookback = 1
-layers = 1
-hidden_s = 100
-latent_s= 50
-n_epochs = 75
-#--------------------------------
-#--------------------------------
 
 #load data
 def load_data(csv):
+    """
+    Load dataset from CSV file.
+
+    Args:
+        csv (str): Path to CSV file.
+
+    Returns:
+        pd.DataFrame: DataFrame indexed by Datetime.
+    """
     return pd.read_csv(csv, index_col="Datetime", parse_dates=True)
 
 #clean data
 def clean_data(df):
+    """
+    Apply preprocessing:
+    - Log transformation
+    - Remove low-variance features
+
+    Args:
+        df (pd.DataFrame): Raw dataset.
+
+    Returns:
+        pd.DataFrame: Cleaned dataset.
+    """
     df = np.log1p(df)
-    #df = df.diff().fillna(0)
     low_var_cols = df.columns[df.std() < 0.01]
     print(low_var_cols)
     df = df.drop(columns=low_var_cols)
     return df
     
-def get_change(df, stds):
-    return df
 
 def plot_features(df):
+    """
+    Plot all features as scatter plots over time
+
+    Args:
+        df (pd.DataFrame): Input dataset.
+    """
     cols_per_fig = int(df.shape[0]/2)
     total_cols = int(df.shape[1])
 
@@ -65,12 +97,20 @@ def plot_features(df):
         plt.tight_layout(rect=[0, 0, 1, 0.95])
 
         # Save figure
-        filename = f"ml/features_{vm}_{i+1}_to_{i+chunk.shape[1]-1}.png"
+        filename = f"{fig_path}/features_{i+1}_to_{i+chunk.shape[1]-1}.png"
         plt.savefig(filename, dpi=300)
         print(f"plot {filename} saved")
         plt.close()
 
 def plot_single_column(df, column, end_index):
+    """
+    Plot a single feature up to a specific timestamp.
+
+    Args:
+        df (pd.DataFrame): Input dataset.
+        column (str): Feature name.
+        end_index: Timestamp limit.
+    """
     df_plot = df.loc[:end_index, column]
 
     # Plot
@@ -81,24 +121,32 @@ def plot_single_column(df, column, end_index):
     plt.tight_layout()
 
     # Save figure
-    filename = f"ml/plot_{column}_{end_index}.png"
+    filename = f"{fig_path}/plot_{column}_{end_index}.png"
     plt.savefig(filename, dpi=300)
     print(f"Plot saved: {filename}")
     plt.close()
 
 #---------------------PREPARE DATA---------------------------
-#------------------------------------------------------------
+# Load data
+df = load_data(csv)
 
-df= load_data(csv)
-df = df.drop(columns=['pkts_in','pkts_out','enclosure pool IOPS read','enclosure pool IOPS write','storage pool IOPS write','storage pool IOPS read','storage-RDC used size','storage used size','enclosure used size', 'enclosure refer size','disk_free', 'disk_total','mem_total','load_fifteen', 'load_five', 'storage-RDC refer size'])
+# Drop manually selected noisy/irrelevant features
+df = df.drop(columns=[
+    'pkts_in','pkts_out',
+    'enclosure pool IOPS read','enclosure pool IOPS write',
+    'storage pool IOPS write','storage pool IOPS read',
+    'storage-RDC used size','storage used size',
+    'enclosure used size','enclosure refer size',
+    'disk_free','disk_total','mem_total',
+    'load_fifteen','load_five','storage-RDC refer size'
+])
+
+# Clean data
 df = clean_data(df)
 
-#plot_features(df)
-#plot_single_column(df, 'storage pool read BW', "2025-09-17")
-
-#print("OVERVIEW LOG DIFF TRANSFORM DATAFRAME:\n")
-#print(df.describe().transpose())
-#print("\n")
+print("OVERVIEW LOG TRANSFORM DATAFRAME:\n")
+print(df.describe().transpose())
+print("\n")
 
 
 # Split
@@ -106,23 +154,17 @@ df_test = df['2026-01-16':]
 df_train  = df[:'2026-01-15']
 
 
-#scale Min-Max
-
-# Get min and max from train
-train_min = df_train.min()
+#scaling
 train_max = df_train.max()
 
-print(f"train max: {train_max}\n")
-print(f"train min {train_min}")
-
-# Scale train and test to 0-1 using training statistics
+#scaling disabled left for experimentation
 #df_train_scaled = (df_train) / train_max
 #df_test_scaled = (df_test) / train_max
 
 df_train_scaled = df_train
 df_test_scaled = df_test
 
-"""
+
 print("OVERVIEW TRAIN AND TEST DATAFRAME:\n")
 print("train\n")
 print(df_train.describe().transpose())
@@ -130,7 +172,7 @@ print("\n")
 print("test\n")
 print(df_test.describe().transpose())
 print("\n")
-"""
+
 
 print("Train stats:", df_train_scaled.values.min(), df_train_scaled.values.max())
 print("Test stats:", df_test_scaled.values.min(), df_test_scaled.values.max())
@@ -141,20 +183,31 @@ print("Test stats:", df_test_scaled.values.min(), df_test_scaled.values.max())
 features = df.shape[1]
 
 def create_window(dataset, lookback):
+    """
+    Convert time series into sequences for LSTM input.
+
+    Args:
+        dataset (np.array): Input data.
+        lookback (int): Number of timesteps per sequence.
+
+    Returns:
+        tuple: (input_sequences, targets)
+    """
     x, y = [], []
     for i in range(len(dataset)-lookback):
         x.append(dataset[i:i+lookback])
         y.append(dataset[i+lookback])
     return torch.tensor(np.array(x), dtype=torch.float32), torch.tensor(np.array(y), dtype=torch.float32)
 
-#create dataset
+#create train/test dataset sequences
 x_train, _ = create_window(df_train_scaled.values, lookback)
 x_test, _  = create_window(df_test_scaled.values, lookback)
 
-# target = input
+# Autoencoder uses target = input
 train_dataset = data.TensorDataset(x_train, x_train)
 test_dataset  = data.TensorDataset(x_test, x_test)
 
+#size, lookback, features
 print(x_train.shape)
 print(x_test.shape)
 
@@ -227,29 +280,11 @@ class Autoencoder(nn.Module):
         return reconstructed
 
 
-#----------TRAINING-------------
-#-------------------------------
-sparse_cols = ['enclosure pool read BW','enclosure pool write BW','bytes_in']
-
-weights = torch.ones(features)
-for i, col in enumerate(df.columns):
-    if col in sparse_cols:
-        weights[i] = 15.0
-
-#weighted error loss function
-def weighted_feature_rmse(y_pred, y_true, weights):
-    # RMSE per feature across sequences
-    mse_per_feature = ((y_pred - y_true) ** 2).mean(dim=(0,1))
-
-    # Weighted average across features
-    weighted_rmse = (mse_per_feature * weights).sum() / weights.sum()
-    
-    return weighted_rmse, mse_per_feature
 
 #---------TRAINING--------------------------
 model=Autoencoder()
 optimizer = optim.Adam(model.parameters())
-loss_fn = nn.MSELoss() #normal loss function
+loss_fn = nn.MSELoss() #loss function
 loader = data.DataLoader(train_dataset, batch_size=60, shuffle=True)
 
 
@@ -257,14 +292,14 @@ for epoch in range(n_epochs):
     model.train()
     for x_batch, _ in loader:
         y_pred = model(x_batch)
-        #loss = loss_fn(y_pred, x_batch)
+        loss = loss_fn(y_pred, x_batch)
 
-        loss, _ = weighted_feature_rmse(y_pred, x_batch, weights)
         
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-
+    
+    #evaluation
     model.eval()
     with torch.no_grad():
         recon_train = model(x_train)
@@ -272,25 +307,27 @@ for epoch in range(n_epochs):
         train_rmse = torch.sqrt(loss_fn(recon_train, x_train))
         test_rmse = torch.sqrt(loss_fn(recon_test, x_test))
 
-        #train_rmse, train_rmse_per_feature = weighted_feature_rmse(recon_train, x_train, weights)
-        #test_rmse, test_rmse_per_feature = weighted_feature_rmse(recon_test, x_test, weights)
     print(
         f"Epoch {epoch}: "
-        f"train weighted RMSE {train_rmse.item():.7f} | "
-        f"test weighted RMSE {test_rmse.item():.7f}"
+        f"train RMSE {train_rmse.item():.7f} | "
+        f"test RMSE {test_rmse.item():.7f}"
     )
-
-    #print("\nTest RMSE per feature:")
-    #for col, rmse in zip(df.columns, test_rmse_per_feature):
-        #print(f"{col}: {rmse.item():.4f}")
-    #print(f"Epoch {epoch}: train RMSE {train_rmse:.4f} | test RMSE {test_rmse:.4f}")
 
 
 #----VISUALIZE RESULTS-------------
 def get_recons(df):
     """
-    given a sequence as a df, get reconstruction by model
+    Generate reconstructed sequences from trained model.
+
+    Args:
+        df (pd.DataFrame): Input dataset
+
+    Returns:
+        tuple:
+            df_recon (pd.DataFrame): Reconstructed values
+            df_actual (pd.DataFrame): Actual values
     """
+
     seqs, _ = create_window(df.values, lookback)
     with torch.no_grad():
         recon = model(seqs)
@@ -305,21 +342,42 @@ def get_recons(df):
 
 def get_error(df_recon, df_actual):
     """
-    given a recon set of sequences and the actual sequences, calculate reconstruction error
+    Compute reconstruction error per feature and total error.
+
+    Args:
+        df_recon (pd.DataFrame): Reconstructed values from the model.
+        df_actual (pd.DataFrame): actual values.
+
+    Returns:
+        pd.DataFrame: DataFrame containing squared error per feature and
+                      an additional column 'error_total' representing
+                      overall reconstruction error per timestamp.
     """
     df_error = pd.DataFrame((df_actual-df_recon)**2, columns=df_actual.columns, index=df_actual.index) #relative error
     df_error['error_total']= np.sqrt(df_error.mean(axis=1))
     return df_error
 
 def get_high_error_timestamps(df_error, top_n=50):
+    """
+    Identify timestamps with the highest reconstruction error.
+
+    Args:
+        df_error (pd.DataFrame): DataFrame containing per-feature errors
+                                 and 'error_total'.
+        top_n (int, optional): Number of anomalous timestamps to display.
+                               Default is 50.
+
+    Returns:
+        pd.DataFrame: Summary DataFrame sorted by highest total error,
+                      including:
+                      - max_feature: feature contributing most to error
+                      - max_feature_error: its error value
+                      - error_total: total reconstruction error
+    """
     # Separate feature errors from total error
     df_features = df_error.drop(columns=['error_total'])
-
-    # Feature with highest error per row
     max_feature = df_features.idxmax(axis=1)
-    # Value of that max error
     max_value = df_features.max(axis=1)
-    # Total error
     total_error = df_error['error_total']
 
     # Combine everything
@@ -333,10 +391,21 @@ def get_high_error_timestamps(df_error, top_n=50):
     summary = summary.sort_values(by='error_total', ascending=False)
 
     # Top N
-    print(summary.head(top_n))
+    #print(summary.head(top_n))
     return summary
 
 def inspect_sequences(df_actual, df_recon, index_list):
+    """
+    Inspect and compare actual vs reconstructed values for selected timestamps.
+
+    Args:
+        df_actual (pd.DataFrame): actual values.
+        df_recon (pd.DataFrame): Reconstructed values.
+        index_list (list): List of timestamps to inspect.
+
+    Returns:
+        None
+    """
     #df_recon = np.expm1(df_recon)
     #df_actual = np.expm1(df_actual)
     #df_recon = df_recon*train_max
@@ -350,13 +419,11 @@ def inspect_sequences(df_actual, df_recon, index_list):
             print(df.head(40))
         count = count+1
 
+
+#Run analysis
 df_recon, df_actual = get_recons(df_train_scaled)
 df_error = get_error(df_recon, df_actual)
-
 summary = get_high_error_timestamps(df_error)
-
 index_list = summary.index.tolist()
-
 inspect_sequences(df_actual, df_recon, index_list)
 
-exit()

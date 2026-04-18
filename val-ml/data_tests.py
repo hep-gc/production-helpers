@@ -24,7 +24,6 @@ def load_data(csv):
 #CLEAN DATA
 def clean_data(df):
     df = np.log1p(df)
-    #df = df.diff().fillna(0)
     low_var_cols = df.columns[df.std() < 0.01]
     print(low_var_cols)
     df = df.drop(columns=low_var_cols)
