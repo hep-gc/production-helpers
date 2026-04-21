@@ -52,7 +52,7 @@ def clean_data(df):
         pd.DataFrame: Cleaned DataFrame.
     """
     df = np.log1p(df)
-    low_var_cols = df.columns[df.std() < 0.007]
+    low_var_cols = df.columns[df.std() < 0.007] #can change treshold to include more/less features
     #print(low_var_cols)
     df = df.drop(columns=low_var_cols)
     return df
@@ -70,13 +70,13 @@ def plot_features(df):
 
     for i in range(0, total_cols, cols_per_fig):
         chunk = df[df.columns[i:i+cols_per_fig]].copy()
-        chunk.reset_index(inplace=True) 
+        chunk.reset_index(inplace=True)
 
         ncols = 10
         nrows = math.ceil(chunk.shape[1] / ncols)
 
         fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(24*2, nrows*4))
-        axes = np.array(axes).flatten() 
+        axes = np.array(axes).flatten()
 
         for j, col in enumerate(chunk.columns[1:]):
             chunk.plot(kind='scatter', x=chunk.columns[0], y=col, ax=axes[j], color='c')
@@ -122,6 +122,7 @@ def plot_single_column(df, column, end_index):
 #==========================================================
 #PREPARE DATA
 df= load_data(csv)
+#drop manually selected features
 df = df.drop(columns=['Unknown_SSH_Connections','pkts_in','pkts_out','enclosure pool IOPS read','enclosure pool IOPS write','storage pool IOPS write','storage pool IOPS read','storage-RDC used size','storage used size','enclosure used size', 'enclosure refer size','disk_free', 'disk_total','mem_total','load_fifteen', 'load_five', 'storage-RDC refer size'])
 df = clean_data(df)
 
@@ -130,7 +131,7 @@ print(df.describe().transpose())
 print("\n")
 
 # Split dataset based on date
-df_test = df['2026-01-21':]
+df_test = df['2026-01-21':] 
 df_train  = df[:'2026-01-20']
 
 #scale
@@ -139,7 +140,6 @@ train_max = df_train.max()
 # Scaling
 #df_train_scaled = (df_train) / train_max
 #df_test_scaled = (df_test) / train_max
-
 df_train_scaled = df_train
 df_test_scaled = df_test
 
@@ -163,7 +163,7 @@ iso =  IsolationForest(
         n_estimators=500, #number of trees
         max_samples='auto', #samples per tree
         max_features=14, #number of features per split
-        random_state=42
+        random_state=42 #Controls the randomness of the selection of the feature and split values 
     )
 
 #train model on training data

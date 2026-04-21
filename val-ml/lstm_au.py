@@ -20,7 +20,7 @@ fig_path = 'ml'
 lookback = 1 #sequence lenght for LSTM input
 
 #model hyperparameters
-layers = 1
+layers = 1 #number of layers
 hidden_s = 100 #hidden state
 latent_s= 50 #latent state
 
@@ -60,7 +60,7 @@ def clean_data(df):
         pd.DataFrame: Cleaned dataset.
     """
     df = np.log1p(df)
-    low_var_cols = df.columns[df.std() < 0.01]
+    low_var_cols = df.columns[df.std() < 0.01] #can change to include/exclude more/less features
     print(low_var_cols)
     df = df.drop(columns=low_var_cols)
     return df
@@ -154,7 +154,7 @@ df_test = df['2026-01-16':]
 df_train  = df[:'2026-01-15']
 
 
-#scaling
+#scaling to [0,1] range
 train_max = df_train.max()
 
 #scaling disabled left for experimentation
@@ -203,6 +203,7 @@ def create_window(dataset, lookback):
 x_train, _ = create_window(df_train_scaled.values, lookback)
 x_test, _  = create_window(df_test_scaled.values, lookback)
 
+#Convert into tensor dataset
 # Autoencoder uses target = input
 train_dataset = data.TensorDataset(x_train, x_train)
 test_dataset  = data.TensorDataset(x_test, x_test)
@@ -323,7 +324,6 @@ def get_recons(df):
         df (pd.DataFrame): Input dataset
 
     Returns:
-        tuple:
             df_recon (pd.DataFrame): Reconstructed values
             df_actual (pd.DataFrame): Actual values
     """
@@ -406,6 +406,7 @@ def inspect_sequences(df_actual, df_recon, index_list):
     Returns:
         None
     """
+    #convert values back to original scale
     #df_recon = np.expm1(df_recon)
     #df_actual = np.expm1(df_actual)
     #df_recon = df_recon*train_max
@@ -420,7 +421,7 @@ def inspect_sequences(df_actual, df_recon, index_list):
         count = count+1
 
 
-#Run analysis
+
 df_recon, df_actual = get_recons(df_train_scaled)
 df_error = get_error(df_recon, df_actual)
 summary = get_high_error_timestamps(df_error)

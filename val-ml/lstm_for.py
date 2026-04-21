@@ -17,7 +17,7 @@ csv = 'raw_year_features_belle.csv' #input dataset
 
 #model parameters
 lookback = 1 #sequence length for LSTM input
-layers = 2 
+layers = 2 #number of layers
 hidden_l = 12 #hidden state
 n_epochs = 55 #training epochs
 
@@ -61,7 +61,7 @@ def clean_data(df):
         pd.DataFrame: dataset with low-variance features removed.
     """
     df = np.log1p(df)
-    low_var_cols = df.columns[df.std() < 0.01]
+    low_var_cols = df.columns[df.std() < 0.01] #change to include more/less features
     print(low_var_cols)
     df = df.drop(columns=low_var_cols)
     return df
@@ -82,7 +82,6 @@ df_train  = df[:'2025-11-01']
 #scale values
 train_mean = df_train.mean()
 train_std = df_train.std()
-
 #df_train = (df_train - train_mean) / train_std
 #df_test = (df_test - train_mean) / train_std
 

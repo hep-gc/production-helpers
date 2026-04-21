@@ -13,7 +13,7 @@ DAY = "0"
 #path to vm
 host_path = r"rrds/Belle-II RDC/xrd5.belle.uvic.ca/"
 #resolution of timestamps
-res = YEAR
+res = BIWEEK
 #path to saved csv
 save_path = "raw_year_features_belle.csv"
 #features to ignore

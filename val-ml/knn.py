@@ -57,7 +57,7 @@ def clean_data(df):
         pd.DataFrame: DataFrame.
     """
     df = np.log1p(df)
-    low_var_cols = df.columns[df.std() < 0.007]
+    low_var_cols = df.columns[df.std() < 0.007] #change treshold to include more/less features
     #print(low_var_cols)
     df = df.drop(columns=low_var_cols)
     return df
@@ -126,6 +126,7 @@ def plot_single_column(df, column, end_index):
 #----PREPARE DATA------
 
 df= load_data(csv)
+#columns/features manually dropped
 df = df.drop(columns=['storage free size','storage refer size','enclosure free size','storage-RDC refer size','load_five','load_fifteen','enclosure refer size','Unknown_SSH_Connections','pkts_in','pkts_out','enclosure pool IOPS read','enclosure pool IOPS write','storage pool IOPS write','storage pool IOPS read','storage-RDC free size'])
 df = clean_data(df)
 
@@ -171,8 +172,9 @@ distances, indices = nbrs.kneighbors(df_train_scaled)
 
 scores = distances[:, -1]
 
-#treshold for anomaly detection
+#compute/select treshold for anomaly detection
 threshold = scores.mean() + 3 * scores.std()
+#classify anomaly/normal
 labels = np.where(scores > threshold, -1, 1)
 
 #count anomalies
